@@ -96,10 +96,44 @@ int main() {
     inst_size=inst.size();
 
     int i=0;
+    //  sub, mul, beq, bne, slt, j, lw, sw
     while(i!=inst_size){
         string cur_inst=inst[i];
 
         //perform various function according to instructionn
+        if (cur_inst.substr(0,4)=="addi"){
+            // cout<<"addi he"<<endl;
+        }
+        else if(cur_inst.substr(0,3)=="add"){
+            // cout<<"add bro"<<endl;
+        }
+        else if(cur_inst.substr(0,3)=="sub"){
+
+        }
+        else if (cur_inst.substr(0,3)=="mul"){
+
+        }
+        else if(cur_inst.substr(0,3)=="beq"){
+
+        }
+        else if(cur_inst.substr(0,3)=="bne"){
+
+        }
+        else if(cur_inst.substr(0,3)=="slt"){
+
+        }
+        else if(cur_inst.substr(0,1)=="j"){
+
+        }
+        else if(cur_inst.substr(0,2)=="lw"){
+
+        }
+        else if(cur_inst.substr(0,3)=="sw"){
+
+        }
+        else{
+            //throw error
+        }
 
 
 
