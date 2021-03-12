@@ -454,14 +454,14 @@ int main() {
     inst_size=inst.size();
 
     int i=0;
+    //  sub, mul, beq, bne, slt, j, lw, sw
     while(i!=inst_size){
         parse(inst[i]);
         i++;
-
     }
-    
     inst_size=instruction_list.size();
     memory_check(instruction_list);
+
 
     ll PC=0;
     while(PC!=inst_size){
