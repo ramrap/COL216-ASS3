@@ -1,1 +1,6 @@
-lw $t8, 1000
+addi $t1, $t2, 31
+addi $t2, $t2, 32
+mul $t3, $t2, $t1
+j help
+mul $t3, $t3, $t3
+help: add $t3, $t3, $t2
