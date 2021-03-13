@@ -153,19 +153,19 @@ void parse(pair<string,ll> instru){
         
     }
     keyword = line.substr(0, first);
-    cout<<keyword<<"end"<<endl;
+    // cout<<keyword<<" end"<<endl;
     string remain = trimmed(line.substr(first));
     vector<string> remains;
     size_t end = remain.find(",");
     while (end != std::string::npos)
     {   
         remains.push_back(trimmed(remain.substr(0, end)));
-        cout<<remains[remains.size()-1]<<endl;
+
         remain = remain.substr(end+1);
         end = remain.find(",");
     }
     remains.push_back(trimmed(remain));
-    cout<<remains[remains.size()-1]<<endl;
+    
 
     if(keyword.compare("add") == 0 || keyword.compare("sub") == 0 || keyword.compare("mul") == 0 || keyword.compare("slt") == 0){
         if (remains.size() != 3){
@@ -186,6 +186,7 @@ void parse(pair<string,ll> instru){
 
     
     else if(keyword == "j"){
+        
         if (remains.size() != 1){
             cout<<"PARSE ME HE"<<endl;
             throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
@@ -270,10 +271,12 @@ void parse(pair<string,ll> instru){
 
     }
     else if (keyword == "addi"){
+        
         if (remains.size() != 3){
             cout<<"PARSE ME HE"<<endl;
             throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
+        
         if(registers.find(remains[0]) == registers.end() || registers.find(remains[1]) == registers.end()  ){
             cout<<"PARSE ME HE"<<endl;
             throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
@@ -281,7 +284,7 @@ void parse(pair<string,ll> instru){
         variables.push_back(remains[0]);
         variables.push_back(remains[1]);
         try{
-            cout<<"PARSE ME HE"<<endl;
+            
             arguments.push_back(stoi(remains[2]));
         }
         catch(runtime_error){
@@ -303,7 +306,7 @@ void parse(pair<string,ll> instru){
 void ADDI(Instruction I){
     vector<string> vars=I.vars;
     vector<int>args = I.args;
-    // cout<<"Addi "<<registers[vars[1]]<<" "<<args[0]<<endl;
+    
     registers[vars[0]]=registers[vars[1]]+args[0];
     
 }
@@ -353,13 +356,15 @@ void SLT(Instruction I){
     registers[vars[0]] = registers[vars[1]] < registers[vars[2]] ? 1 : 0;
 }
 void JUMP(Instruction I,ll &PC){
+    // cout<<"JUMP KE FUNCT ME"<<endl;
     vector<string> vars = I.vars;
-    PC = registers[vars[0]];
+    PC = labels[vars[0]];
     if (PC >= inst_size){
         throw runtime_error("attempt to execute non-instruction at: "+llToHex(PC*4));
     }
 }
 void LW(Instruction I){
+    
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     // cout<<vars.size()<<" "<<args.size()<<endl;
@@ -486,19 +491,20 @@ int main() {
     inst_size=inst.size();
 
     int i=0;
-    //  sub, mul, beq, bne, slt, j, lw, sw
     while(i!=inst_size){
         parse(inst[i]);
         i++;
+
     }
+    
     inst_size=instruction_list.size();
     if(inst_size>max_size){
         throw runtime_error("memory exceeded : Too many Instructions");
     }
     occupied_mem = inst_size*4;
 
-
     ll PC=0;
+    ll inst_num=0;int fl=1;
     while(PC!=inst_size){
         Instruction temp = instruction_list[PC];
         string operation =temp.kw;
