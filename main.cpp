@@ -553,7 +553,7 @@ int main() {
             SW(temp);
             PC++;
         }
-        
+        registers["$zero"] = 0;
         for (int i =0; i<30; i++) {   
             string reg = "$r" + to_string(i);    
             cout << reg << " "<< int32ToHex(registers[reg])<<"\n";
