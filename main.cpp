@@ -505,6 +505,7 @@ int main() {
 
     ll PC=0;
     ll inst_num=0;int fl=1;
+    int num_add =0, num_addi =0, num_j = 0, num_sub =0, num_mul =0, num_bne =0, num_beq =0, num_lw=0, num_sw=0, num_slt =0;
     while(PC!=inst_size){
         Instruction temp = instruction_list[PC];
         string operation =temp.kw;
@@ -512,45 +513,55 @@ int main() {
         if (operation=="addi"){
             // cout<<"addi he"<<endl;
             ADDI(temp);
+            num_addi++;
             PC++;
         }
         else if(operation=="add"){
             // cout<<"add bro"<<endl;
             ADD(temp);
+            num_add++;
             PC++;
         }
         else if(operation=="sub"){
             SUB(temp);
+            num_sub++;
             PC++;
         }
         else if (operation=="mul"){
             MUL(temp);
+            num_mul++;
             PC++;
         }
         else if(operation=="beq"){
             BEQ(temp,PC);
+            num_beq++;
 
         }
         else if(operation=="bne"){
             BNE(temp,PC);
+            num_bne++;
 
         }
         else if(operation=="slt"){
             SLT(temp);
+            num_slt++;
             PC++;
         }
         else if(operation=="j"){
             JUMP(temp,PC);
+            num_j++;
             
 
         }
         else if(operation=="lw"){
             LW(temp);
+            num_lw++;
             PC++;
 
         }
         else if(operation=="sw"){
             SW(temp);
+            num_sw++;
             PC++;
         }
         registers["$zero"] = 0;
@@ -560,9 +571,21 @@ int main() {
         }
         cout << "$sp "<< int32ToHex(registers["$sp"])<<"\n";
         cout << "$zero "<< int32ToHex(0)<<"\n";
+        cout<<endl;
     }
-    cout<<"PROGRAM ENDED \n";
-    
+    cout<<"Statistics \n";
+    cout << "Total no. of clock cycles: "<<to_string(num_add+num_addi+num_beq+num_bne+num_j+num_lw+num_sw+num_sub+num_slt+num_mul)<<endl;
+    cout<< "Number of times instruction were executed: \n";
+    cout<< "add: "<<to_string(num_add)<<endl;
+    cout<< "addi: "<<to_string(num_addi)<<endl;
+    cout<< "sub: "<<to_string(num_sub)<<endl;
+    cout<< "mul: "<<to_string(num_mul)<<endl;
+    cout<< "bne: "<<to_string(num_bne)<<endl;
+    cout<< "beq: "<<to_string(num_beq)<<endl;
+    cout<< "j: "<<to_string(num_j)<<endl;
+    cout<< "slt: "<<to_string(num_slt)<<endl;
+    cout<< "lw: "<<to_string(num_lw)<<endl;
+    cout<< "sw: "<<to_string(num_sw)<<endl;    
 
     
     return 0;
