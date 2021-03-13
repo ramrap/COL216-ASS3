@@ -33,7 +33,7 @@ vector<int>t(100000,0);// t0=0-2000, t1=2000*1-2000*2 , t2= 2000*2 .......
 vector<pair<string,ll>> inst;
 vector<Instruction> instruction_list;
 vector<string> operators = {"add", "sub", "mul", "bne", "beq", "slt", "addi", "lw", "sw", "j"};
-
+vector<string> oinst;
 unordered_map<string,int32_t> registers;
 unordered_map<string,int> labels;     // 'branch_mname -> line number
 
@@ -388,102 +388,7 @@ void SW(Instruction I){
     memory[addr/4]=registers[vars[0]];
 }
 
-
-int main(int argc, char *argv[]) {
-    
-    
-     //Intialising all registers to 0;
-    registers.insert(make_pair("$zero",0));
-    registers.insert(make_pair("$sp",max_size*4-4));
-    for(int i=0;i<30;i++){
-        string s="$r";
-        s+=to_string(i);
-        registers.insert(make_pair(s,0));
-    }
-
-    //allocating size to memory Array
-    memory = new int32_t[max_size];
-
-    // read file name from CLI
-    if(argc==0){
-        cout<<"Please provide input file path"<<endl;
-        return 0;
-    }
-    ifstream file(argv[1]);
-    if(!file.is_open()){
-        cout<<"Error: Provide Valid File Path"<<endl;
-        return 0;
-    }
-    
-    if (file.is_open())
-    {
-        string line, oline;
-        ll line_num = 0;
-        int num = 1;
-        while (getline(file, oline))
-        {
-            // cout<<line<<endl;
-            line = trimmed(oline);
-            if (line.compare("") != 0){
-                if (line.find(":") != string::npos){
-                    if (line[line.length() -1] == ':'){
-                        if (line.find(" ") != string::npos || line.find("\t") != string::npos){
-                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
-                        }
-                        if (find(operators.begin(), operators.end(), line.substr(0, line.length() -1)) != operators.end()){
-                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
-                        }
-                        labels.insert(pair<string,int>(line.substr(0,line.length() - 1),line_num));
-                        num+=1;
-                    }
-                    else{
-                        size_t ind = line.find(':');
-                        string line1 = line.substr(0,ind+1);
-                        string line2 = trimmed(line.substr(ind+1));
-
-                        if(line2.find(':')!= string::npos){
-                            throw ("Syntax Error at line "+to_string(num)+ "in : " + oline);
-                        }
-                        if (line1.find(" ") != string::npos || line1.find("\t") != string::npos){
-                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
-                        }
-                        if (find(operators.begin(), operators.end(), line.substr(0, line.length() -1)) != operators.end()){
-                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
-                        }
-                        labels.insert(pair<string,int>(line1.substr(0,line1.length() - 1),line_num));
-                        inst.push_back(pair<string,ll>(line2,num));
-                        line_num += 1;
-                        num+=2;
-                    }
-                    
-                }
-                else{
-                inst.push_back(pair<string,ll>(line,num));
-                line_num += 1;
-                num++;
-                
-                }
-            }
-            else{
-                num++;
-            }   
-        }
-    }
-    inst_size=inst.size();
-
-    int i=0;
-    while(i!=inst_size){
-        parse(inst[i]);
-        i++;
-
-    }
-    
-    inst_size=instruction_list.size();
-    if(inst_size>max_size){
-        throw runtime_error("memory exceeded : Too many Instructions");
-    }
-    occupied_mem = inst_size*4;
-
+void execute(){
     ll PC=0;
     ll inst_num=0;int fl=1;
     int num_add =0, num_addi =0, num_j = 0, num_sub =0, num_mul =0, num_bne =0, num_beq =0, num_lw=0, num_sw=0, num_slt =0;
@@ -491,6 +396,8 @@ int main(int argc, char *argv[]) {
         Instruction temp = instruction_list[PC];
         string operation =temp.kw;
         cout<<"PC: "<<llToHex(PC*4)<<endl;
+        cout<<temp.line<<endl;
+        cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl;
         if (operation=="addi"){
             // cout<<"addi he"<<endl;
             ADDI(temp);
@@ -554,7 +461,8 @@ int main(int argc, char *argv[]) {
         cout << "$zero "<< int32ToHex(0)<<"\n";
         cout<<endl;
     }
-    cout<<"Statistics \n";
+    cout<<"Program Executed Successfully.\n\n";
+    cout<<"*****Statistics***** \n";
     cout << "Total no. of clock cycles: "<<to_string(num_add+num_addi+num_beq+num_bne+num_j+num_lw+num_sw+num_sub+num_slt+num_mul)<<endl;
     cout<< "Number of times instruction were executed: \n";
     cout<< "add: "<<to_string(num_add)<<endl;
@@ -566,7 +474,112 @@ int main(int argc, char *argv[]) {
     cout<< "j: "<<to_string(num_j)<<endl;
     cout<< "slt: "<<to_string(num_slt)<<endl;
     cout<< "lw: "<<to_string(num_lw)<<endl;
-    cout<< "sw: "<<to_string(num_sw)<<endl;    
+    cout<< "sw: "<<to_string(num_sw)<<endl;
+}
+
+int main(int argc, char *argv[]) {
+    
+    
+     //Intialising all registers to 0;
+    registers.insert(make_pair("$zero",0));
+    registers.insert(make_pair("$sp",max_size*4-4));
+    for(int i=0;i<30;i++){
+        string s="$r";
+        s+=to_string(i);
+        registers.insert(make_pair(s,0));
+    }
+
+    //allocating size to memory Array
+    memory = new int32_t[max_size];
+
+    // read file name from CLI
+    if(argc==0){
+        cout<<"Please provide input file path"<<endl;
+        return 0;
+    }
+    ifstream file(argv[1]);
+    if(!file.is_open()){
+        cout<<"Error: Provide Valid File Path"<<endl;
+        return 0;
+    }
+    
+    if (file.is_open())
+    {
+        string line, oline;
+        ll line_num = 0;
+        int num = 1;
+        while (getline(file, oline))
+        {
+            // cout<<line<<endl;
+            line = trimmed(oline);
+            oinst.push_back(line);
+            if (line.compare("") != 0){
+                if (line.find(":") != string::npos){
+                    if (line[line.length() -1] == ':'){
+                        if (line.find(" ") != string::npos || line.find("\t") != string::npos){
+                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
+                        }
+                        if (find(operators.begin(), operators.end(), line.substr(0, line.length() -1)) != operators.end()){
+                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
+                        }
+                        if(labels.find(line) != labels.end()){
+                            throw runtime_error("An operator cannot be a label. Label is defined for the second time on line " +to_string(num));
+                        }
+                        labels.insert(pair<string,int>(line.substr(0,line.length() - 1),line_num));
+                        num+=1;
+                    }
+                    else{
+                        size_t ind = line.find(':');
+                        string line1 = line.substr(0,ind+1);
+                        string line2 = trimmed(line.substr(ind+1));
+
+                        if(line2.find(':')!= string::npos){
+                            throw ("Syntax Error at line "+to_string(num)+ "in : " + oline);
+                        }
+                        if (line1.find(" ") != string::npos || line1.find("\t") != string::npos){
+                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
+                        }
+                        if (find(operators.begin(), operators.end(), line1.substr(0, line1.length() -1)) != operators.end()){
+                            throw runtime_error("An operator cannot be a label. Syntax Error at line "+to_string(num)+ ": " + oline);
+                        }
+                        if(labels.find(line1) != labels.end()){
+                            throw runtime_error("Label is defined for the second time on line " +to_string(num));
+                        }
+                        labels.insert(pair<string,int>(line1.substr(0,line1.length() - 1),line_num));
+                        inst.push_back(pair<string,ll>(line2,num));
+                        line_num += 1;
+                        num+=1;
+                    }
+                    
+                }
+                else{
+                inst.push_back(pair<string,ll>(line,num));
+                line_num += 1;
+                num++;
+                
+                }
+            }
+            else{
+                num++;
+            }   
+        }
+    }
+    inst_size=inst.size();
+
+    int i=0;
+    while(i!=inst_size){
+        parse(inst[i]);
+        i++;
+
+    }
+    
+    inst_size=instruction_list.size();
+    if(inst_size>max_size){
+        throw runtime_error("memory exceeded : Too many Instructions");
+    }
+    occupied_mem = inst_size*4;
+
+    execute();    
 
     return 0;
 }
