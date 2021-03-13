@@ -1,6 +1,7 @@
 // c++14
 #include <iostream>
 #include <fstream>
+#include <sstream>
 //  remove_if, sort, min, max, reverse,  merge, binary_search, is_sorted, unique, replace_if, count, push_heap, pop_heap, make_heap
 #include <algorithm>
 #include <vector>
@@ -54,14 +55,14 @@ typedef map<int,int> MPII;
 // build with: g++ main.cpp -o main -std=c++14
 //./main > test.out
 ll max_size=(1<<20)/4;
+ll occupied_mem;
 vector<int>t(100000,0);
 // t0=0-2000, t1=2000*1-2000*2 , t2= 2000*2 .......   
 // vector<int>
-vector<string> inst;
+vector<pair<string,ll>> inst;
 ll inst_size;
-//map for memory
-unordered_map<int,int> memory;
-unordered_map<string,int> registers;
+
+unordered_map<string,int32_t> registers;
 
 const string WS = " \t";
 unordered_map<string,int> labels;     // 'branch_mname -> line number
@@ -71,9 +72,12 @@ struct Instruction
     string kw;
     vector<string>vars;
     vector<int>args;
+    ll line;
 };
+int32_t* memory = NULL;
+ll first_byte ;
 vector<Instruction> instruction_list;
-
+vector<string> operators = {"add", "sub", "mul", "bne", "beq", "slt", "addi", "lw", "sw", "j"};
 // functions for map reference
 // begin() – Returns an iterator to the first element in the map
 // end() – Returns an iterator to the theoretical element that follows last element in the map
@@ -89,54 +93,6 @@ vector<Instruction> instruction_list;
 
 //write fucntions here
 
-void memory_check(vector<Instruction> instruction_list){
-    ll size=0;
-    for(int i=0;i<instruction_list.size();i++){
-        Instruction temp = instruction_list[i];
-        string operation =temp.kw;
-
-        if (operation=="addi"){
-            // cout<<"addi he"<<endl;
-           size++;
-        }
-        else if(operation=="add"){
-            // cout<<"add bro"<<endl;
-            size++;
-        }
-        else if(operation=="sub"){
-            size++;
-        }
-        else if (operation=="mul"){
-           size++;
-        }
-        else if(operation=="beq"){
-           size++;
-
-        }
-        else if(operation=="bne"){
-            size++;
-
-        }
-        else if(operation=="slt"){
-            size++;
-        }
-        else if(operation=="j"){
-            size++;
-
-        }
-        else if(operation=="lw"){
-            size++;
-
-        }
-        else if(operation=="sw"){
-            size++;
-        }
-        
-    }
-    if(size>max_size){
-        throw invalid_argument("memory exceeded : Too many Instructions");
-    }
-}
 
 string trimmed(string line){
     size_t first = line.find_first_not_of(WS);
@@ -150,6 +106,17 @@ string trimmed(string line){
     }
     return ans;
 
+}
+string int32ToHex(int32_t num){
+    stringstream sstream;
+    sstream<< hex<< num;
+    return(sstream.str());
+}
+
+string llToHex(long long num){
+    stringstream sstream;
+    sstream<< hex<< num;
+    return(sstream.str());
 }
 // Instrction in
 // kw
@@ -166,7 +133,10 @@ string trimmed(string line){
 // sw $t0, 1000 -done
 // addi $t0, $t0, 8 -done
 // branch:
-void parse(string line){
+
+void parse(pair<string,ll> instru){
+    string line = instru.first;
+    ll num = instru.second;
     string keyword;
     vector<string> variables;
     vector<int> arguments;
@@ -178,15 +148,9 @@ void parse(string line){
         size_t first = min(first, line.find("\t"));
     }
     if (first == string::npos){
-        if(line.find(":") != string::npos){
-            keyword = line.substr(0, line.length() -1);
-            Instruction i = {keyword, variables, arguments};
-            instruction_list.push_back(i);
-            return;
-        }
-        else{
-            throw invalid_argument("syntax error at: "+line); 
-        }
+        
+        throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + line); 
+        
     }
     keyword = line.substr(0, first);
     cout<<keyword<<"end"<<endl;
@@ -206,16 +170,16 @@ void parse(string line){
     if(keyword.compare("add") == 0 || keyword.compare("sub") == 0 || keyword.compare("mul") == 0 || keyword.compare("slt") == 0){
         if (remains.size() != 3){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         if(registers.find(remains[0]) == registers.end() || registers.find(remains[1]) == registers.end() || registers.find(remains[2]) == registers.end() ){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         variables.push_back(remains[0]);
         variables.push_back(remains[1]);
         variables.push_back(remains[2]);
-        Instruction i = {keyword, variables, arguments};
+        Instruction i = {keyword, variables, arguments, num};
         instruction_list.push_back(i);
         return;
     }
@@ -224,14 +188,14 @@ void parse(string line){
     else if(keyword == "j"){
         if (remains.size() != 1){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         if(labels.find(remains[0]) == labels.end()){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         variables.push_back(remains[0]);
-        Instruction i = {keyword, variables, arguments};
+        Instruction i = {keyword, variables, arguments, num};
         instruction_list.push_back(i);
         return;
     }
@@ -240,16 +204,16 @@ void parse(string line){
     else if(keyword == "beq" || keyword == "bne"){
         if(remains.size() != 3){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \""+keyword+"\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         if(registers.find(remains[0]) == registers.end() || registers.find(remains[1]) == registers.end() || labels.find(remains[2]) == labels.end()){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \""+keyword+"\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         variables.push_back(remains[0]);
         variables.push_back(remains[1]);
         variables.push_back(remains[2]);
-        Instruction i = {keyword, variables, arguments};
+        Instruction i = {keyword, variables, arguments, num};
         instruction_list.push_back(i);
         return;
     }
@@ -258,22 +222,49 @@ void parse(string line){
          
         if(remains.size() != 2){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \""+keyword+"\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         if(registers.find(remains[0]) == registers.end()){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \""+keyword+"\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         variables.push_back(remains[0]);
+        if(remains[1].find("(") != string::npos){
+            int ind = remains[1].find("(");
+            string reg = trimmed(remains[1].substr(ind));
+            if(reg[reg.length() -1]==')' && registers.find(reg.substr(1,reg.length()-2)) != registers.end()){
+                variables.push_back(reg.substr(1, reg.length()-2));
+            }
+            else{
+                throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
+            }
+            string offset = trimmed(remains[1].substr(0,ind));
+            if(offset==""){
+                arguments.push_back(0);
+            }
+            else{
+                try{
+                    arguments.push_back(stoi(offset));
+                }
+                catch(runtime_error){
+                    throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
+
+                }
+            }
+            Instruction i = {keyword, variables, arguments, num};
+            instruction_list.push_back(i);
+            return;
+            
+        }
          try{
             arguments.push_back(stoi(remains[1]));
         }
-        catch(invalid_argument){
+        catch(runtime_error){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         
-        Instruction i = {keyword, variables, arguments};
+        Instruction i = {keyword, variables, arguments, num};
         instruction_list.push_back(i);
         return;
 
@@ -281,11 +272,11 @@ void parse(string line){
     else if (keyword == "addi"){
         if (remains.size() != 3){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         if(registers.find(remains[0]) == registers.end() || registers.find(remains[1]) == registers.end()  ){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
         variables.push_back(remains[0]);
         variables.push_back(remains[1]);
@@ -293,17 +284,17 @@ void parse(string line){
             cout<<"PARSE ME HE"<<endl;
             arguments.push_back(stoi(remains[2]));
         }
-        catch(invalid_argument){
+        catch(runtime_error){
             cout<<"PARSE ME HE"<<endl;
-            throw invalid_argument("syntax error in \"" + keyword + "\" instruction in: "+line);
+            throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
-        Instruction i = {keyword, variables, arguments};
+        Instruction i = {keyword, variables, arguments, num};
         instruction_list.push_back(i);
         return;
     }
     else{
         cout<<"PARSE ME HE"<<endl;
-        throw invalid_argument("syntax error in: "+line);
+        throw runtime_error("syntax error in line "+to_string(num)+ ": " + line);
     }
     return;
 }
@@ -334,11 +325,15 @@ void MUL(Instruction I){
 void BEQ(Instruction I,ll &PC){
     vector<string> vars = I.vars;
     if(registers[vars[0]] == registers[vars[1]]){
-        PC=labels[vars[2]]-1;
+        PC=labels[vars[2]];
+        if (PC >= inst_size){
+            throw runtime_error("attempt to execute non-instruction at: "+llToHex(PC*4));
+        }
     }
     else{
         PC++;
     }
+    
 }
 void BNE(Instruction I,ll &PC){
     vector<string>vars = I.vars;
@@ -346,8 +341,12 @@ void BNE(Instruction I,ll &PC){
         PC++;
     }
     else{
-        PC = labels[vars[2]]-1;
+        PC = labels[vars[2]];
+        if (PC >= inst_size){
+            throw runtime_error("attempt to execute non-instruction at: "+llToHex(PC*4));
+        }
     }
+    
 }
 void SLT(Instruction I){
     vector<string> vars = I.vars;
@@ -355,51 +354,75 @@ void SLT(Instruction I){
 }
 void JUMP(Instruction I,ll &PC){
     vector<string> vars = I.vars;
-    PC = registers[vars[0]]-1;
+    PC = registers[vars[0]];
+    if (PC >= inst_size){
+        throw runtime_error("attempt to execute non-instruction at: "+llToHex(PC*4));
+    }
 }
 void LW(Instruction I){
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     // cout<<vars.size()<<" "<<args.size()<<endl;
-    if(memory.find(args[0])==memory.end()){
-        cout<<"HELLO LW ME HE \n";
-        throw bad_alloc();
+    int addr;
+    if (vars.size() == 2){
+        string reg =vars[1];
+        int offset = args[0];
+        addr = registers[reg] + offset;
+        
     }
     else{
-        registers[vars[0]]=memory[args[0]]+1;
+        addr = args[0];
+    }
+    if(addr < occupied_mem || addr >= (1<<20)){
+        throw runtime_error("address("+to_string(addr)+") is out of range("+to_string(occupied_mem)+" to "+to_string((1<<20)-1) + ") at line "+to_string(I.line));
+    }
+    if(addr % 4 != 0){
+        throw runtime_error("unaligned address in lw: "+to_string(addr)+" at line "+to_string(I.line));
+    }
+    else{
+        try{
+            registers[vars[0]]=memory[addr/4];
+        }
+        catch(exception){
+            throw runtime_error("bad address at data read: "+to_string(addr)+" at line: "+to_string(I.line));
+        }
     }
 }
 
 void SW(Instruction I){
     vector<string> vars = I.vars;
     vector<int>args = I.args;
-    for(int i=-3;i<=3;i++){
-        if(i!=0){
-            if(memory.find(args[0])!=memory.end()){
-                //memory already occupied
-                cout<<"HELLO SW ME HE \n";
-                throw bad_alloc();
-            }
-        }
+    int addr;
+    if (vars.size() == 2){
+        string reg =vars[1];
+        int offset = args[0];
+        addr = registers[reg] + offset;
+        
     }
-    memory[args[0]]=registers[vars[0]];
+    else{
+        addr = args[0];
+    }
+    if(addr < occupied_mem || addr >= (1<<20)){
+        throw runtime_error("address("+to_string(addr)+") is out of range("+to_string(occupied_mem)+" to "+to_string((1<<20)-1) + ") at line "+to_string(I.line));
+    }
+    if(addr % 4 != 0){
+        throw runtime_error("unaligned address in sw: "+to_string(addr)+" at line "+to_string(I.line));
+    }
+    memory[addr/4]=registers[vars[0]];
 }
-
-
-
-
-
 
 
 int main() {
     
      //Intialising all registers to 0;
     registers.insert(make_pair("$zero",0));
-    for(int i=0;i<31;i++){
-        string s="$t";
+    registers.insert(make_pair("$sp",max_size*4-4));
+    for(int i=0;i<30;i++){
+        string s="$r";
         s+=to_string(i);
         registers.insert(make_pair(s,0));
     }
+    memory = new int32_t[max_size];
 
     // read input
     // read input
@@ -407,7 +430,8 @@ int main() {
     if (file.is_open())
     {
         string line, oline;
-        int line_num = 0;
+        ll line_num = 0;
+        int num = 1;
         while (getline(file, oline))
         {
             line = trimmed(oline);
@@ -415,12 +439,13 @@ int main() {
                 if (line.find(":") != string::npos){
                     if (line[line.length() -1] == ':'){
                         if (line.find(" ") != string::npos || line.find("\t") != string::npos){
-                            throw invalid_argument("Syntax Error in Line: " + oline);
+                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
                         }
-                        labels.insert(pair<string,int>(line.substr(0,line.length() - 1),line_num+1));
-                        
-                        inst.push_back(line);
-                        line_num += 1;
+                        if (find(operators.begin(), operators.end(), line.substr(0, line.length() -1)) != operators.end()){
+                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
+                        }
+                        labels.insert(pair<string,int>(line.substr(0,line.length() - 1),line_num));
+                        num+=1;
                         cout<<line<<endl;
                     }
                     else{
@@ -429,24 +454,31 @@ int main() {
                         string line2 = trimmed(line.substr(ind+1));
 
                         if(line2.find(':')!= string::npos){
-                            throw ("Syntax Error in Line: " + oline);
+                            throw ("Syntax Error at line "+to_string(num)+ "in : " + oline);
                         }
                         if (line1.find(" ") != string::npos || line1.find("\t") != string::npos){
-                            throw invalid_argument("Syntax Error in Line: " + oline);
+                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
                         }
-                        labels.insert(pair<string,int>(line1.substr(0,line1.length() - 1),line_num+1));
-                        inst.push_back(line1);
-                        inst.push_back(line2);
-                        line_num += 2;
+                        if (find(operators.begin(), operators.end(), line.substr(0, line.length() -1)) != operators.end()){
+                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
+                        }
+                        labels.insert(pair<string,int>(line1.substr(0,line1.length() - 1),line_num));
+                        inst.push_back(pair<string,ll>(line2,num));
+                        line_num += 1;
+                        num+=2;
                         cout<<line1<<endl;
                         cout<<line2<<endl;
                     }
                     
                 }
                 else{
-                inst.push_back(line);
+                inst.push_back(pair<string,ll>(line,num));
                 line_num += 1;
+                num++;
                 cout << line << endl;}
+            }
+            else{
+                num++;
             }
             // cout << line << endl;
         }
@@ -460,14 +492,17 @@ int main() {
         i++;
     }
     inst_size=instruction_list.size();
-    memory_check(instruction_list);
+    if(inst_size>max_size){
+        throw runtime_error("memory exceeded : Too many Instructions");
+    }
+    occupied_mem = inst_size*4;
 
 
     ll PC=0;
     while(PC!=inst_size){
         Instruction temp = instruction_list[PC];
         string operation =temp.kw;
-
+        cout<<"PC: "<<llToHex(PC*4)<<endl;
         if (operation=="addi"){
             // cout<<"addi he"<<endl;
             ADDI(temp);
@@ -500,6 +535,7 @@ int main() {
         }
         else if(operation=="j"){
             JUMP(temp,PC);
+            
 
         }
         else if(operation=="lw"){
@@ -511,16 +547,16 @@ int main() {
             SW(temp);
             PC++;
         }
-        else{
-           PC++;
+        
+        for (int i =0; i<30; i++) {   
+            string reg = "$r" + to_string(i);    
+            cout << reg << " "<< int32ToHex(registers[reg])<<"\n";
         }
-
+        cout << "$sp "<< int32ToHex(registers["$sp"])<<"\n";
+        cout << "$zero "<< int32ToHex(0)<<"\n";
     }
     cout<<"PROGRAM ENDED \n";
-    for (auto& it: registers) {
-    // Do stuff
-    cout << it.first<<" "<<it.second<<"\n";
-}
+    
 
     
     return 0;
