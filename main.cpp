@@ -94,7 +94,7 @@ void parse(pair<string,ll> instru){
     vector<string> variables;
     vector<int> arguments;
 
-
+    // find the operator
     size_t first = line.find(" ");
     if (first == string::npos){
         first = line.find("\t");
@@ -109,6 +109,7 @@ void parse(pair<string,ll> instru){
     }
     keyword = line.substr(0, first);
     
+    // remaining string
     string remain = trimmed(line.substr(first));
 
     //vector to store all arguments provided in line 
@@ -123,7 +124,8 @@ void parse(pair<string,ll> instru){
     }
     remains.push_back(trimmed(remain));
     
-    //Checking syntax if Instruction is starting with "add","sub","mul","slt"
+    //Checking syntax if Instruction is starting with "add","sub","mul","slt" and adding it to instruction_list
+    // Throws errors if anything is syntactically incorrect
     if(keyword.compare("add") == 0 || keyword.compare("sub") == 0 || keyword.compare("mul") == 0 || keyword.compare("slt") == 0){
         if (remains.size() != 3){
             
@@ -141,7 +143,8 @@ void parse(pair<string,ll> instru){
         return;
     }
 
-    //Checking syntax if Instruction is starting with "j"
+    //Checking syntax if Instruction is starting with "j" and adding it to instruction_list
+    // Throws errors if anything is syntactically incorrect
     else if(keyword == "j"){
         
         if (remains.size() != 1){
@@ -158,7 +161,7 @@ void parse(pair<string,ll> instru){
         return;
     }
     
-    //Checking syntax if Instruction is starting with "beq","bne"
+    //Checking syntax if Instruction is starting with "beq","bne" and adding it to instruction_list
     else if(keyword == "beq" || keyword == "bne"){
         if(remains.size() != 3){
             
@@ -176,7 +179,8 @@ void parse(pair<string,ll> instru){
         return;
     }
     
-    //Checking syntax if Instruction is starting with "lw","sw".
+    //Checking syntax if Instruction is starting with "lw","sw" and adding it to instruction_list
+    // Throws errors if anything is syntactically incorrect
      else if(keyword =="lw" || keyword == "sw"){
          
         if(remains.size() != 2){
@@ -229,7 +233,8 @@ void parse(pair<string,ll> instru){
 
     }
 
-    //Checking syntax if Instruction is starting with "addi"
+    //Checking syntax if Instruction is starting with "addi" and adding it to instruction_list
+    // Throws errors if anything is syntactically incorrect
     else if (keyword == "addi"){
         
         if (remains.size() != 3){
@@ -285,20 +290,20 @@ void SUB(Instruction I){
     registers[vars[0]] = registers[vars[1]]-registers[vars[2]];
 }
 
-//To execute instruction mul
+// To execute instruction mul
 void MUL(Instruction I){
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     registers[vars[0]] = registers[vars[1]]*registers[vars[2]];
 }
 
-//To execute instruction beq
+// To execute instruction beq
 void BEQ(Instruction I,ll &PC){
     vector<string> vars = I.vars;
     if(registers[vars[0]] == registers[vars[1]]){
         PC=labels[vars[2]];
         if (PC >= inst_size){
-            throw runtime_error("attempt to execute non-instruction at: "+llToHex(PC*4));
+            throw runtime_error("attempt to execute non-instruction at PC: "+llToHex(PC*4));
         }
     }
     else{
@@ -315,7 +320,7 @@ void BNE(Instruction I,ll &PC){
     else{
         PC = labels[vars[2]];
         if (PC >= inst_size){
-            throw runtime_error("attempt to execute non-instruction at: "+llToHex(PC*4));
+            throw runtime_error("attempt to execute non-instruction at PC: "+llToHex(PC*4));
         }
     }
 }
@@ -331,11 +336,11 @@ void JUMP(Instruction I,ll &PC){
     vector<string> vars = I.vars;
     PC = labels[vars[0]];
     if (PC >= inst_size){
-        throw runtime_error("attempt to execute non-instruction at: "+llToHex(PC*4));
+        throw runtime_error("attempt to execute non-instruction at PC: "+llToHex(PC*4));
     }
 }
 
-//To execute instruction LW
+//To execute instruction LW 
 void LW(Instruction I){
     
     vector<string> vars = I.vars;
@@ -388,16 +393,19 @@ void SW(Instruction I){
     memory[addr/4]=registers[vars[0]];
 }
 
+// execute the instructions one by one and print the outputs 
 void execute(){
     ll PC=0;
     ll inst_num=0;int fl=1;
     int num_add =0, num_addi =0, num_j = 0, num_sub =0, num_mul =0, num_bne =0, num_beq =0, num_lw=0, num_sw=0, num_slt =0;
+    // Increasing PC until we reach last line
     while(PC!=inst_size){
         Instruction temp = instruction_list[PC];
         string operation =temp.kw;
         cout<<"PC: "<<llToHex(PC*4)<<endl;
-        cout<<temp.line<<endl;
         cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl;
+
+        // Call respective operations for instructions
         if (operation=="addi"){
             // cout<<"addi he"<<endl;
             ADDI(temp);
@@ -477,10 +485,9 @@ void execute(){
     cout<< "sw: "<<to_string(num_sw)<<endl;
 }
 
-int main(int argc, char *argv[]) {
-    
-    
-     //Intialising all registers to 0;
+// initialize registers and memory array.
+void initialise_memory(){
+    //Intialising all registers to 0;
     registers.insert(make_pair("$zero",0));
     registers.insert(make_pair("$sp",max_size*4-4));
     for(int i=0;i<30;i++){
@@ -492,12 +499,22 @@ int main(int argc, char *argv[]) {
     //allocating size to memory Array
     memory = new int32_t[max_size];
 
+}
+
+// main function
+int main(int argc, char *argv[]) {
+    
+    
+    initialise_memory();
+    
     // read file name from CLI
     if(argc==0){
         cout<<"Please provide input file path"<<endl;
         return 0;
     }
     ifstream file(argv[1]);
+
+    //If file is failed to open or file_path is wrong in argument then throw error
     if(!file.is_open()){
         cout<<"Error: Provide Valid File Path"<<endl;
         return 0;
@@ -508,6 +525,9 @@ int main(int argc, char *argv[]) {
         string line, oline;
         ll line_num = 0;
         int num = 1;
+        
+        
+        //code for reading from input file and converting each line into parsable strings
         while (getline(file, oline))
         {
             // cout<<line<<endl;
@@ -534,7 +554,7 @@ int main(int argc, char *argv[]) {
                         string line2 = trimmed(line.substr(ind+1));
 
                         if(line2.find(':')!= string::npos){
-                            throw ("Syntax Error at line "+to_string(num)+ "in : " + oline);
+                            throw runtime_error("Syntax Error at line " + to_string(num) + " in : " + oline);
                         }
                         if (line1.find(" ") != string::npos || line1.find("\t") != string::npos){
                             throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
@@ -568,17 +588,20 @@ int main(int argc, char *argv[]) {
 
     int i=0;
     while(i!=inst_size){
+        //parsing instruction
         parse(inst[i]);
         i++;
-
     }
     
     inst_size=instruction_list.size();
+
+    //if instructionList size exceeds allotted memory then throw error
     if(inst_size>max_size){
         throw runtime_error("memory exceeded : Too many Instructions");
     }
     occupied_mem = inst_size*4;
 
+    //function to execute InstructionList obtained after parsing
     execute();    
 
     return 0;
