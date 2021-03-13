@@ -205,7 +205,7 @@ void parse(pair<string,ll> instru){
                 try{
                     arguments.push_back(stoi(offset));
                 }
-                catch(runtime_error){
+                catch(exception){
                     throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
 
                 }
@@ -218,7 +218,7 @@ void parse(pair<string,ll> instru){
          try{
             arguments.push_back(stoi(remains[1]));
         }
-        catch(runtime_error){
+        catch(exception){
             
             throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
@@ -247,7 +247,7 @@ void parse(pair<string,ll> instru){
             
             arguments.push_back(stoi(remains[2]));
         }
-        catch(runtime_error){
+        catch(exception){
             
             throw runtime_error("Syntax Error in \"" + keyword + "\" instruction at line "+to_string(num)+ ": " + line);
         }
