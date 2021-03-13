@@ -520,10 +520,10 @@ int main(int argc, char *argv[]) {
                             throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
                         }
                         if (find(operators.begin(), operators.end(), line.substr(0, line.length() -1)) != operators.end()){
-                            throw runtime_error("Syntax Error at line "+to_string(num)+ ": " + oline);
+                            throw runtime_error("An operator cannot be a label. Syntax Error at line "+to_string(num)+ ": " + oline);
                         }
-                        if(labels.find(line) != labels.end()){
-                            throw runtime_error("An operator cannot be a label. Label is defined for the second time on line " +to_string(num));
+                        if(labels.find(line.substr(0, line.length()-1)) != labels.end()){
+                            throw runtime_error("Label is defined for the second time on line " +to_string(num));
                         }
                         labels.insert(pair<string,int>(line.substr(0,line.length() - 1),line_num));
                         num+=1;
@@ -542,7 +542,7 @@ int main(int argc, char *argv[]) {
                         if (find(operators.begin(), operators.end(), line1.substr(0, line1.length() -1)) != operators.end()){
                             throw runtime_error("An operator cannot be a label. Syntax Error at line "+to_string(num)+ ": " + oline);
                         }
-                        if(labels.find(line1) != labels.end()){
+                        if(labels.find(line1.substr(0,line1.length()-1)) != labels.end()){
                             throw runtime_error("Label is defined for the second time on line " +to_string(num));
                         }
                         labels.insert(pair<string,int>(line1.substr(0,line1.length() - 1),line_num));
