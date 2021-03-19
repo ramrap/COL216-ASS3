@@ -34,6 +34,8 @@ vector<pair<string,ll>> inst;
 vector<Instruction> instruction_list;
 vector<string> operators = {"add", "sub", "mul", "bne", "beq", "slt", "addi", "lw", "sw", "j"};
 vector<string> oinst;
+vector<string> reg_name = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$a4", "$a5", "$a6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$s8", "$ra" };
+vector<int> used_mem;
 unordered_map<string,int32_t> registers;
 unordered_map<string,int> labels;     // 'branch_mname -> line number
 
@@ -364,6 +366,7 @@ void LW(Instruction I){
     else{
         try{
             registers[vars[0]]=memory[addr/4];
+            used_mem.push_back(addr/4);
         }
         catch(exception){
             throw runtime_error("bad address at data read: "+to_string(addr)+" at line: "+to_string(I.line));
@@ -461,13 +464,12 @@ void execute(){
             PC++;
         }
         registers["$zero"] = 0;
-        for (int i =0; i<30; i++) {   
-            string reg = "$r" + to_string(i);    
+        for (int i =0; i<32; i++) {   
+            string reg = reg_name[i];    
             cout << reg << " "<< int32ToHex(registers[reg])<<"\n";
         }
-        cout << "$sp "<< int32ToHex(registers["$sp"])<<"\n";
-        cout << "$zero "<< int32ToHex(0)<<"\n";
         cout<<endl;
+        
     }
     cout<<"Program Executed Successfully.\n\n";
     cout<<"*****Statistics***** \n";
@@ -483,6 +485,19 @@ void execute(){
     cout<< "slt: "<<to_string(num_slt)<<endl;
     cout<< "lw: "<<to_string(num_lw)<<endl;
     cout<< "sw: "<<to_string(num_sw)<<endl;
+    cout<<endl;
+    cout<<"Used Data Values During Execution"<<endl;
+    sort(used_mem.begin(), used_mem.end());
+    for(int i = 0; i < used_mem.size(); i++){
+        if(i != 0){
+            if(used_mem[i] != used_mem[i-1]){
+                cout<<used_mem[i]*4<<"-"<<used_mem[i]*4 + 3<<": "<<int32ToHex(memory[used_mem[i]])<<endl;
+            }
+        }
+        else{
+            cout<<used_mem[i]*4<<"-"<<used_mem[i]*4 + 3<<": "<<int32ToHex(memory[used_mem[i]])<<endl;
+        }
+    }
 }
 
 // initialize registers and memory array.
@@ -490,11 +505,35 @@ void initialise_memory(){
     //Intialising all registers to 0;
     registers.insert(make_pair("$zero",0));
     registers.insert(make_pair("$sp",max_size*4-4));
-    for(int i=0;i<30;i++){
-        string s="$r";
+    registers.insert(make_pair("$gp",0));
+    registers.insert(make_pair("$at",0));
+    registers.insert(make_pair("$ra",0));
+    
+    for(int i=0;i<=9;i++){
+        string s="$t";
         s+=to_string(i);
         registers.insert(make_pair(s,0));
+        if (i <= 8){
+            s = "$s";
+            s+= to_string(i);
+            registers.insert(make_pair(s,0));
+        }
     }
+
+    for(int i=0;i<4;i++){
+        string s="$a";
+        s+=to_string(i);
+        registers.insert(make_pair(s,0));
+        if (i <= 1){
+            s = "$v";
+            s+= to_string(i);
+            registers.insert(make_pair(s,0));
+            s = "$k";
+            s+= to_string(i);
+            registers.insert(make_pair(s,0));
+        }
+    }
+    
 
     //allocating size to memory Array
     memory = new int32_t[max_size];
