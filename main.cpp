@@ -34,7 +34,7 @@ vector<pair<string,ll>> inst;
 vector<Instruction> instruction_list;
 vector<string> operators = {"add", "sub", "mul", "bne", "beq", "slt", "addi", "lw", "sw", "j"};
 vector<string> oinst;
-vector<string> reg_name = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$a4", "$a5", "$a6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$s8", "$ra" };
+vector<string> reg_name = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra" };
 vector<int> used_mem;
 unordered_map<string,int32_t> registers;
 unordered_map<string,int> labels;     // 'branch_mname -> line number
@@ -466,7 +466,7 @@ void execute(){
         registers["$zero"] = 0;
         for (int i =0; i<32; i++) {   
             string reg = reg_name[i];    
-            cout << reg << " "<< int32ToHex(registers[reg])<<"\n";
+            cout << reg << ": "<< int32ToHex(registers[reg])<<"\n";
         }
         cout<<endl;
         
@@ -506,6 +506,7 @@ void initialise_memory(){
     registers.insert(make_pair("$zero",0));
     registers.insert(make_pair("$sp",max_size*4-4));
     registers.insert(make_pair("$gp",0));
+    registers.insert(make_pair("$fp",0));
     registers.insert(make_pair("$at",0));
     registers.insert(make_pair("$ra",0));
     
@@ -513,7 +514,7 @@ void initialise_memory(){
         string s="$t";
         s+=to_string(i);
         registers.insert(make_pair(s,0));
-        if (i <= 8){
+        if (i <= 7){
             s = "$s";
             s+= to_string(i);
             registers.insert(make_pair(s,0));
