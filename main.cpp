@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include <string> 
+#include "helper.hpp"
 
 #include <unordered_map>
 using namespace std;
@@ -14,10 +15,18 @@ using namespace std;
 // build with: g++ main.cpp -o main -std=c++14
 //./main > test.out
 ll max_size=(1<<20)/4;
+int rows = (1<<10)/4;
+int columns = (1<<10)/4;
+int access_row, access_column;
+int row_access_start, row_access_end, column_access_start, column_access_end, op, put_back_row, put_back_start, put_back_end, buffer_updates=0, data_bus;
+string waiting_reg;
+bool in_buffer = false;
+bool no_blocking = true;
 ll occupied_mem;
 ll inst_size;
 ll first_byte ;
-const string WS = " \t";
+int row_delay =10, column_delay = 2;
+
 struct Instruction
 {
     /* data */
@@ -27,50 +36,29 @@ struct Instruction
     ll line;
 };
 
-int32_t* memory = NULL;
+int32_t** memory = NULL;
 
-vector<int>t(100000,0);// t0=0-2000, t1=2000*1-2000*2 , t2= 2000*2 .......   
 vector<pair<string,ll>> inst;
 vector<Instruction> instruction_list;
 vector<string> operators = {"add", "sub", "mul", "bne", "beq", "slt", "addi", "lw", "sw", "j"};
 vector<string> oinst;
 vector<string> reg_name = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra" };
-vector<int> used_mem;
+int32_t* buffer_row = NULL;
+int buffered = -1;
+vector<vector<int>> used_mem;
+vector<vector<int>> changed_mem;
+vector<string> changed_regs;
 unordered_map<string,int32_t> registers;
 unordered_map<string,int> labels;     // 'branch_mname -> line number
 
 
 
-
-//Function used to trim given string by removing white spaces from it
-string trimmed(string line){
-    size_t first = line.find_first_not_of(WS);
-    size_t last = line.find_last_not_of(WS);
-    string ans;
-    if (first==string::npos){
-        ans= "";
-    }
-    else {
-        ans= line.substr(first, last-first +1);
-    }
-    return ans;
-
+int getRow(int num){
+    return num / columns;
 }
-
-// Convert Int TO Hex
-string int32ToHex(int32_t num){
-    stringstream sstream;
-    sstream<< hex<< num;
-    return(sstream.str());
+int getColumn(int num){
+    return num % columns;
 }
-
-// Convert long long to Hex
-string llToHex(long long num){
-    stringstream sstream;
-    sstream<< hex<< num;
-    return(sstream.str());
-}
-
 
 // add $t0, $t0, $t1 
 // sub $t0, $t0, $t1 
@@ -276,6 +264,7 @@ void ADDI(Instruction I){
     vector<string> vars=I.vars;
     vector<int>args = I.args;
     registers[vars[0]]=registers[vars[1]]+args[0]; 
+    changed_regs.push_back(vars[0]);
 }
 
 //To execute instruction add
@@ -283,6 +272,7 @@ void ADD(Instruction I){
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     registers[vars[0]] = registers[vars[1]]+registers[vars[2]];
+    changed_regs.push_back(vars[0]);
 }
 
 //To execute instruction sub
@@ -290,6 +280,7 @@ void SUB(Instruction I){
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     registers[vars[0]] = registers[vars[1]]-registers[vars[2]];
+    changed_regs.push_back(vars[0]);
 }
 
 // To execute instruction mul
@@ -297,6 +288,7 @@ void MUL(Instruction I){
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     registers[vars[0]] = registers[vars[1]]*registers[vars[2]];
+    changed_regs.push_back(vars[0]);
 }
 
 // To execute instruction beq
@@ -331,6 +323,7 @@ void BNE(Instruction I,ll &PC){
 void SLT(Instruction I){
     vector<string> vars = I.vars;
     registers[vars[0]] = registers[vars[1]] < registers[vars[2]] ? 1 : 0;
+    changed_regs.push_back(vars[0]);
 }
 
 //To execute instruction jump
@@ -343,7 +336,7 @@ void JUMP(Instruction I,ll &PC){
 }
 
 //To execute instruction LW 
-void LW(Instruction I){
+void LW(Instruction I, ll cycles){
     
     vector<string> vars = I.vars;
     vector<int>args = I.args;
@@ -363,19 +356,44 @@ void LW(Instruction I){
     if(addr % 4 != 0){
         throw runtime_error("unaligned address in lw: "+to_string(addr)+" at line "+to_string(I.line));
     }
+
+    access_row = getRow(addr/4);
+    access_column = getColumn(addr/4);
+    waiting_reg = vars[0];
+    op =1;
+    in_buffer = true;
+    if(buffered == access_row){
+        put_back_end = -1;
+        put_back_start = -1;
+        row_access_end = -1;
+        row_access_start = -1;
+        column_access_start = cycles+1;
+        column_access_end = cycles+ column_delay;
+    }
+
     else{
-        try{
-            registers[vars[0]]=memory[addr/4];
-            used_mem.push_back(addr/4);
+        if(buffered == -1){
+            put_back_end = -1;
+            put_back_start = -1;
+            row_access_end = cycles + row_delay;
+            row_access_start = cycles + 1;
+            column_access_start = cycles+ 1 + row_delay;
+            column_access_end = cycles+ +row_delay +column_delay;
         }
-        catch(exception){
-            throw runtime_error("bad address at data read: "+to_string(addr)+" at line: "+to_string(I.line));
+        else{
+            put_back_row = buffered;
+            put_back_end = cycles + row_delay;
+            put_back_start = cycles + 1;
+            row_access_start = cycles+ 1 + row_delay;
+            row_access_end = cycles+ + 2*row_delay;
+            column_access_start = cycles+ 1 + 2*row_delay;
+            column_access_end = cycles+ + 2*row_delay +column_delay;
         }
     }
 }
 
 //To execute instruction SW
-void SW(Instruction I){
+void SW(Instruction I, int cycles){
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     int addr;
@@ -393,87 +411,426 @@ void SW(Instruction I){
     if(addr % 4 != 0){
         throw runtime_error("unaligned address in sw: "+to_string(addr)+" at line "+to_string(I.line));
     }
-    memory[addr/4]=registers[vars[0]];
+    access_row = getRow(addr/4);
+    access_column = getColumn(addr/4);
+    waiting_reg = vars[0];
+    op =0;
+    in_buffer = true;
+    data_bus = registers[vars[0]];
+    if(buffered == access_row){
+        put_back_end = -1;
+        put_back_start = -1;
+        row_access_end = -1;
+        row_access_start = -1;
+        column_access_start = cycles+1;
+        column_access_end = cycles+ column_delay;
+
+    }
+
+    else{
+        if(buffered == -1){
+            put_back_end = -1;
+            put_back_start = -1;
+            row_access_end = cycles + row_delay;
+            row_access_start = cycles + 1;
+            column_access_start = cycles+ 1 + row_delay;
+            column_access_end = cycles+ +row_delay +column_delay;
+        }
+        else{
+            put_back_row = buffered;
+            put_back_end = cycles + row_delay;
+            put_back_start = cycles + 1;
+            row_access_start = cycles+ 1 + row_delay;
+            row_access_end = cycles+ + 2*row_delay;
+            column_access_start = cycles+ 1 + 2*row_delay;
+            column_access_end = cycles+ + 2*row_delay +column_delay;
+        }
+    }
+    // cout<<row_access_end<<" "<<column_access_end<<endl;
+}
+
+bool is_safe(Instruction temp){
+    if(op ==0){
+        return true;
+    }
+    else{
+        for(int i = 0; i<temp.vars.size(); i++){
+            if(temp.vars[i] == waiting_reg){
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 // execute the instructions one by one and print the outputs 
 void execute(){
     ll PC=0;
     ll inst_num=0;int fl=1;
-    int num_add =0, num_addi =0, num_j = 0, num_sub =0, num_mul =0, num_bne =0, num_beq =0, num_lw=0, num_sw=0, num_slt =0;
+    int num_add =0, num_addi =0, num_j = 0, num_sub =0, num_mul =0, num_bne =0, num_beq =0, num_lw=0, num_sw=0, num_slt =0, cycles =1, last =-1;
+    bool to_print = false;
     // Increasing PC until we reach last line
-    while(PC!=inst_size){
+    while(PC!=inst_size || cycles <= column_access_end){
+        if(PC != inst_size){
         Instruction temp = instruction_list[PC];
         string operation =temp.kw;
-        cout<<"PC: "<<llToHex(PC*4)<<endl;
-        cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl;
+        // cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl;
 
         // Call respective operations for instructions
-        if (operation=="addi"){
-            // cout<<"addi he"<<endl;
-            ADDI(temp);
-            num_addi++;
-            PC++;
+        if (operation == "addi"){
+            if(in_buffer){
+                if(no_blocking){
+                    if(is_safe(temp)){
+                        ADDI(temp);
+                        num_addi++;
+                        PC++; 
+                        to_print = true; 
+                        }
+                                   
+                }
+            }
+            else{
+                ADDI(temp);
+                num_addi++;
+                PC++;
+                to_print = true;
+            } 
         }
         else if(operation=="add"){
-            // cout<<"add bro"<<endl;
-            ADD(temp);
-            num_add++;
-            PC++;
+            if(in_buffer){
+                if(no_blocking){
+                    if(is_safe(temp)){
+                        ADD(temp);
+                        num_add++;
+                        PC++;
+                        to_print = true;
+                    }
+                                   
+                }
+            }            
+            else{
+                ADD(temp);
+                num_add++;
+                PC++;
+                to_print = true;
+            }
         }
         else if(operation=="sub"){
-            SUB(temp);
-            num_sub++;
-            PC++;
+            if(in_buffer){
+                if(no_blocking){
+                    if(is_safe(temp)){
+                        SUB(temp);
+                        num_sub++;
+                        PC++;
+                        to_print = true;
+                    }
+                                   
+                }
+            }            
+            else{
+                SUB(temp);
+                num_sub++;
+                PC++;
+                to_print = true;
+            }
+
         }
         else if (operation=="mul"){
-            MUL(temp);
-            num_mul++;
-            PC++;
+            if(in_buffer){
+                if(no_blocking){
+                    if(is_safe(temp)){
+                        MUL(temp);
+                        num_mul++;
+                        PC++;
+                        to_print = true;
+                    }
+                                   
+                }
+            }            
+            else{
+                MUL(temp);
+                num_mul++;
+                PC++;
+                to_print = true;
+            }
+            
         }
         else if(operation=="beq"){
-            BEQ(temp,PC);
-            num_beq++;
+            if(in_buffer){
+                if(no_blocking){
+                    if(is_safe(temp)){
+                        BEQ(temp,PC);
+                        num_beq++;
+                        to_print = true;
+                    }
+                }
+            }
+            else{
+                BEQ(temp,PC);
+                num_beq++;
+                to_print = true;
+            }
+            
 
         }
         else if(operation=="bne"){
-            BNE(temp,PC);
-            num_bne++;
+            if(in_buffer){
+                if(no_blocking){
+                    if(is_safe(temp)){
+                        BNE(temp,PC);
+                        num_beq++;
+                        to_print = true;
+                    }
+                }
+            }
+            else{
+                BNE(temp,PC);
+                num_bne++;
+                to_print = true;
+            }
 
         }
         else if(operation=="slt"){
-            SLT(temp);
-            num_slt++;
-            PC++;
+            if(in_buffer){
+                if(no_blocking){
+                    if(is_safe(temp)){
+                        SLT(temp);
+                        num_slt++;
+                        PC++;
+                        to_print = true;
+                    }
+                                   
+                }
+            }            
+            else{
+                SLT(temp);
+                num_slt++;
+                PC++;
+                to_print = true;
+            }
         }
         else if(operation=="j"){
             JUMP(temp,PC);
             num_j++;
-            
-
+            to_print = true;
+        
         }
         else if(operation=="lw"){
-            LW(temp);
-            num_lw++;
-            PC++;
+            if(!in_buffer) {
+                LW(temp, cycles);
+                num_lw++;
+                PC++;
+                to_print = true;
+            }
 
         }
         else if(operation=="sw"){
-            SW(temp);
-            num_sw++;
-            PC++;
+            if(!in_buffer){
+                SW(temp, cycles);
+                num_sw++;
+                PC++;
+                to_print = true;
+            }
         }
+        if(to_print){
+            cout<<"cycle "<<cycles<<":"<<endl;
+            last = cycles;
+            cout<<"Instruction executed: "<<oinst[temp.line -1]<<endl;
+            if(temp.kw == "sw" || temp.kw == "lw"){
+                cout<<"DRAM request issued."<<endl;
+                if(row_access_end == -1){
+                    cout<<"As row "<<access_row<<" is already present in buffer, row activation is not required."<<endl;
+                }
+            }
+        }
+        }
+        if(in_buffer){
+            if(cycles == put_back_end){
+                if(to_print){
+                    cout<<"DRAM: Wroteback row "<<put_back_row<<"."; 
+                    if(put_back_start < put_back_end){
+                        cout<<"(In cycles "<<put_back_start<<"-"<<put_back_end<<")"<<endl;
+                    }
+                    else if(put_back_end == put_back_start){
+                        cout<<"(In cycle "<<put_back_start<<")"<<endl;
+                    }
+                    else{
+                        cout<<endl;
+                    }
+                }
+                else{
+                    to_print = true;
+                    if(last == cycles -1){
+                        cout<<"cycle "<<cycles<<":"<<endl;
+                        last = cycles;
+                    }
+                    else{
+                        cout<<"cycle "<<last+1<<"-"<<cycles<<":"<<endl;
+                        last = cycles;
+                    }
+                    cout<<"DRAM: Wroteback row "<<put_back_row<<"."; 
+                    if(put_back_start < put_back_end){
+                        cout<<"(In cycles "<<put_back_start<<"-"<<put_back_end<<")"<<endl;
+                    }
+                    else if(put_back_end == put_back_start){
+                        cout<<"(In cycle "<<put_back_start<<")"<<endl;
+                    }
+                    else{
+                        cout<<endl;
+                    }
+                }
+            }
+            if (cycles == row_access_end){
+                buffer_row = memory[access_row];
+                buffered = access_row;
+                buffer_updates++;
+                if(to_print){
+                    cout<<"DRAM: Row "<<access_row<<" activated."; 
+                    if(row_access_start < row_access_end){
+                        cout<<"(In cycles "<<row_access_start<<"-"<<row_access_end<<")"<<endl;
+                    }
+                    else if(row_access_end == row_access_start){
+                        cout<<"(In cycle "<<row_access_start<<")"<<endl;
+                    }
+                    else{
+                        cout<<endl;
+                    }
+                }
+                else{
+                    to_print = true;
+                    if(last == cycles -1){
+                        cout<<"cycle "<<cycles<<":"<<endl;
+                        last = cycles;
+                    }
+                    else{
+                        cout<<"cycle "<<last+1<<"-"<<cycles<<":"<<endl;
+                        last = cycles;
+                    }
+                    cout<<"DRAM: Row "<<access_row<<" activated."; 
+                    if(row_access_start < row_access_end){
+                        cout<<"(In cycles "<<row_access_start<<"-"<<row_access_end<<")"<<endl;
+                    }
+                    else if(row_access_end == row_access_start){
+                        cout<<"(In cycle "<<row_access_start<<")"<<endl;
+                    }
+                    else{
+                        cout<<endl;
+                    }
+                }
+            }
+            if(cycles == column_access_end){
+                if(op ==0){
+                    memory[access_row][access_column] = data_bus;
+                    vector<int> temp = {access_row, access_column};
+                    changed_mem.push_back(temp);
+                    used_mem.push_back(temp);
+                    buffer_updates++;
+                }
+                else{
+                    registers[waiting_reg] = memory[access_row][access_column];
+                    changed_regs.push_back(waiting_reg);
+                }
+                if(to_print){
+                    
+                    cout<<"DRAM: Column "<<access_column<<" accessed."; 
+                    if(column_access_start < column_access_end){
+                        cout<<"(In cycles "<<column_access_start<<"-"<<column_access_end<<")"<<endl;
+                    }
+                    else if(column_access_end == column_access_start){
+                        cout<<"(In cycle "<<column_access_start<<")"<<endl;
+                    }
+                    else{
+                        cout<<endl;
+                    }
+                }
+                else{
+                    to_print = true;
+                    if(last == cycles -1){
+                        cout<<"cycle "<<cycles<<":"<<endl;
+                        last = cycles;
+                    }
+                    else{
+                        cout<<"cycle "<<last+1<<"-"<<cycles<<":"<<endl;
+                        last = cycles;
+                    }
+                    cout<<"DRAM: Column "<<access_column<<" accessed."; 
+                    if(column_access_start < column_access_end){
+                        cout<<"(In cycles "<<column_access_start<<"-"<<column_access_end<<")"<<endl;
+                    }
+                    else if(column_access_end == column_access_start){
+                        cout<<"(In cycle "<<column_access_start<<")"<<endl;
+                    }
+                    else{
+                        cout<<endl;
+                    }
+                }
+                in_buffer = false;
+            }
+            
+            if(cycles > column_access_end){
+                cout<<cycles<<" "<<row_access_end<<" "<<column_access_end<<endl;
+                return;
+            }
+        }
+
         registers["$zero"] = 0;
-        for (int i =0; i<32; i++) {   
-            string reg = reg_name[i];    
-            cout << reg << ": "<< int32ToHex(registers[reg])<<"\n";
+        if(changed_regs.size() != 0){
+            sort(changed_regs.begin(), changed_regs.end());
+            if(changed_regs[0] != "$zero"){
+                cout<<"Updated Registers:  ";
+                cout<<changed_regs[0]<<" = "<<registers[changed_regs[0]];
+                for (int i = 1; i<changed_regs.size(); i++){
+                    if(changed_regs[i] != changed_regs[i-1] && changed_regs[i] != "$zero"){
+                        cout<<"    "<<changed_regs[i]<<" = "<<registers[changed_regs[i]];
+                    }
+                }
+                cout<<endl;
+            }
+            
+
         }
+
+        if(changed_mem.size() != 0){
+            if(changed_mem.size() != 1){
+                cout<<"error"<<endl;
+            }
+            sort(changed_mem.begin(), changed_mem.end());
+            cout<<"Memory Address:  ";
+            cout<<(changed_mem[0][0]*columns + changed_mem[0][1])*4<<"-"<<(changed_mem[0][0]*columns + changed_mem[0][1])*4 +3<<" = "<<memory[changed_mem[0][0]][changed_mem[0][1]]<<endl;
+            
+
+        }
+        if(to_print){
+            cout<<endl;
+        }
+        to_print = false;
+        changed_regs.clear();
+        changed_mem.clear();
+        cycles++;
+    }    
+    if(buffered != -1){
+        if(row_delay == 0){
+            cout<<"cycle "<<cycles-1<<endl;
+            cout<<"DRAM: Wroteback row "<<buffered<<"."<<endl;
+        }
+        else if(row_delay ==1){
+            cout<<"cycle "<<cycles<<endl;
+            cout<<"DRAM: Wroteback row "<<buffered<<".(In cycle "<<cycles<<")"<<endl;
+        }
+        else{
+            cout<<"cycle "<<cycles<<"-"<<cycles+row_delay -1<<endl;
+            cout<<"DRAM: Wroteback row "<<buffered<<".(In cycles "<<cycles<<"-"<<cycles+row_delay -1<<")"<<endl;
+            
+        }
+        cycles = cycles + row_delay;
         cout<<endl;
+    } 
+     
         
-    }
-    cout<<"Program Executed Successfully.\n\n";
+    cout<<endl<<"Program Executed Successfully.\n\n";
     cout<<"*****Statistics***** \n";
-    cout << "Total no. of clock cycles: "<<to_string(num_add+num_addi+num_beq+num_bne+num_j+num_lw+num_sw+num_sub+num_slt+num_mul)<<endl;
+    cout << "Total no. of clock cycles: "<<cycles-1<<endl;
+    cout<< "Total number of buffer updates: "<<buffer_updates<<endl;
     cout<< "Number of times instruction were executed: \n";
     cout<< "add: "<<to_string(num_add)<<endl;
     cout<< "addi: "<<to_string(num_addi)<<endl;
@@ -486,16 +843,25 @@ void execute(){
     cout<< "lw: "<<to_string(num_lw)<<endl;
     cout<< "sw: "<<to_string(num_sw)<<endl;
     cout<<endl;
-    cout<<"Used Data Values During Execution"<<endl;
-    sort(used_mem.begin(), used_mem.end());
-    for(int i = 0; i < used_mem.size(); i++){
-        if(i != 0){
-            if(used_mem[i] != used_mem[i-1]){
-                cout<<used_mem[i]*4<<"-"<<used_mem[i]*4 + 3<<": "<<int32ToHex(memory[used_mem[i]])<<endl;
+    cout<<"Register Values After Execution"<<endl;
+    for (int i =0; i<32; i++) {   
+        string reg = reg_name[i];    
+        cout << int32ToHex(registers[reg])<<"  ";
+    }
+    cout<<endl<<endl;
+    
+    if(used_mem.size() != 0){
+        cout<<"Used Data Values During Execution"<<endl;
+        sort(used_mem.begin(), used_mem.end(), compare_address);
+        for(int i = 0; i < used_mem.size(); i++){
+            if(i != 0){
+                if(used_mem[i] != used_mem[i-1]){
+                    cout<<(used_mem[i][0]*columns + used_mem[i][1])*4<<"-"<<(used_mem[i][0]*columns + used_mem[i][1])*4 + 3<<": "<<int32ToHex(memory[used_mem[i][0]][used_mem[i][1]])<<endl;
+                }
             }
-        }
-        else{
-            cout<<used_mem[i]*4<<"-"<<used_mem[i]*4 + 3<<": "<<int32ToHex(memory[used_mem[i]])<<endl;
+            else{
+                cout<<(used_mem[i][0]*columns + used_mem[i][1])*4<<"-"<<(used_mem[i][0]*columns + used_mem[i][1])*4 + 3<<": "<<int32ToHex(memory[used_mem[i][0]][used_mem[i][1]])<<endl;
+            }
         }
     }
 }
@@ -537,29 +903,77 @@ void initialise_memory(){
     
 
     //allocating size to memory Array
-    memory = new int32_t[max_size];
+    buffer_row = new int32_t[columns];
+    memory = new int32_t*[rows];
+    for (int i=0; i<rows; i++){
+        memory[i] = new int32_t[columns];
+    }
 
 }
 
 // main function
 int main(int argc, char *argv[]) {
     
-    
     initialise_memory();
-    
+
     // read file name from CLI
-    if(argc==0){
-        cout<<"Please provide input file path"<<endl;
+    if(argc==1){
+        cout<<"Invalid argument: Please provide input file path"<<endl;
         return 0;
     }
     ifstream file(argv[1]);
+    try{
+        if(argc == 3){
+            string argv2(argv[2]);
+            if(argv2.compare("p1") == 0){
+                no_blocking = false;
+            }
+            else if(argv2.compare("p2") == 0){
+                no_blocking = true;
+            }
+            else{
+                cout<<"Invalid argument: "<<argv2<<" Please provide valid arguments."<<endl;
+                return 0;
+            }
+            
+        }
+        if (argc >=4){
+            row_delay = stoi(argv[2]);
+            column_delay = stoi(argv[3]);
+            if(row_delay <0 || column_delay<0){
+                cout<<"Invalid argument: Row and Column access delay cannot be negative."<<endl;
+                return 0;
+            }
+            if (argc == 5){
+                string argv4(argv[4]);
+                if(argv4 == "p1"){
+                    no_blocking = false;
+                }
+                else if(argv4 == "p2"){
+                    no_blocking = true;
+                }
+                else{
+                    cout<<"Invalid argument: "<<argv4<<" Please provide valid arguments."<<endl;
+                    return 0;
+                }
+            }
+        }
+        
+        if(argc > 5){
+            cout<<"Too Many Arguments: Please provide valid arguments"<<endl;
+            return 0;
+        }
+    }
+    catch(exception e){
+        cout<<"Invalid Arguments"<<endl;
+        return 0;
+    } 
 
     //If file is failed to open or file_path is wrong in argument then throw error
     if(!file.is_open()){
         cout<<"Error: Provide Valid File Path"<<endl;
         return 0;
     }
-    
     if (file.is_open())
     {
         string line, oline;
@@ -632,7 +1046,7 @@ int main(int argc, char *argv[]) {
         parse(inst[i]);
         i++;
     }
-    
+
     inst_size=instruction_list.size();
 
     //if instructionList size exceeds allotted memory then throw error
