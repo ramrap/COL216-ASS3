@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <algorithm>
 using namespace std;
 
 vector<string> req_regs;
@@ -97,6 +97,8 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_
         req_regs.push_back(req.waiting_reg);
         return;
     }
+    int skip_ind = -1;
+    int skip_addr = -1;
     for(int i=request_queue.size() -1; i>0; i--){
         if(req.op == 0){
             if(request_queue[i].op == 1 && request_queue[i].addr == addr){
@@ -104,14 +106,46 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_
             }
             if(request_queue[i].op == 0 && request_queue[i].addr == addr){
                 erase_req(i);
-                i++;
+                i = min((int)request_queue.size(), i+1);
 
             }
         }
         if(req.op == 1){
             if(request_queue[i].op == 1 && request_queue[i].waiting_reg == req.waiting_reg){
+                skip_addr = request_queue[i].addr;
                 erase_req(i);
-                i++;
+                skip_ind = i;
+                break;
+            }
+        }
+    }
+
+    if(skip_ind != -1){
+        int eligible_ind = -1;
+        int skip_row = getRow(skip_addr/4);
+        for(int i = skip_ind; i<request_queue.size(); i++){
+            if(request_queue[i].access_row != skip_row){
+                break;
+            }
+            if(request_queue[i].op == 1 && request_queue[i].addr == skip_addr){
+                break;
+            }
+            if(request_queue[i].op == 0 && request_queue[i].addr == skip_addr){
+                eligible_ind = i;
+                break;
+            }
+
+        }
+        int k=0;
+        for(int i = eligible_ind-1; i>0; i--){
+            if(request_queue[i].op == 1 && request_queue[i].addr == skip_addr){
+                break;
+            }
+            if(request_queue[i].op == 0 && request_queue[i].addr == skip_addr){
+                erase_req(i);
+                k++;
+                i = min(eligible_ind -k, i+1);
+
             }
         }
     }
@@ -148,6 +182,18 @@ bool is_safe(Instruction temp){
     }
     return true;
     
+}
+
+bool is_lw_safe(Instruction temp){
+    string reg = temp.vars[1];
+    for(auto req: request_queue){
+        if(req.op==1){
+            if(reg == req.waiting_reg){
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 void erase_req(int ind){

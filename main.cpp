@@ -371,6 +371,7 @@ void execute(){
     while(PC!=inst_size || cycles <= curr_req_end){
         if(PC != inst_size){
         Instruction temp = instruction_list[PC];
+        int temp_pc = PC;
         string operation =temp.kw;
         // cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl;
 
@@ -495,10 +496,20 @@ void execute(){
         
         }
         else if(operation=="lw"){
-            LW(temp, cycles);
-            num_lw++;
-            PC++;
-            to_print = true;
+            if(in_buffer && no_blocking){
+                if(is_lw_safe(temp)){
+                    SW(temp, cycles);
+                    num_sw++;
+                    PC++;
+                    to_print = true;
+                }
+            }
+            else if(!in_buffer){
+                SW(temp, cycles);
+                num_sw++;
+                PC++;
+                to_print = true;
+            }
 
         }
         else if(operation=="sw"){
@@ -520,7 +531,7 @@ void execute(){
         if(to_print){
             cout<<"cycle "<<cycles<<":"<<endl;
             last = cycles;
-            cout<<"Instruction executed: "<<oinst[temp.line -1]<<endl;
+            cout<<"Instruction executed (PC = "<<temp_pc*4<<"): "<<oinst[temp.line -1]<<endl;
             if(temp.kw == "sw" || temp.kw == "lw"){
                 if(request_queue.size() == 1){
                     cout<<"DRAM request issued.(for memeory address "<<(request_queue[0].access_row*columns + request_queue[0].access_column)*4<<")"<<endl;
