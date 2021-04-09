@@ -52,7 +52,6 @@ unordered_map<string,int> labels;     // 'branch_mname -> line number
 
 //Function to parse Current Instruction and store it to Instruction_list
 void parse(pair<string,ll> instru){
-
     string line = instru.first;
     ll num = instru.second;
 
@@ -528,6 +527,9 @@ void execute(){
                     if(request_queue[0].row_access_end == -1){
                         cout<<"As row "<<request_queue[0].access_row<<" is already present in buffer, row activation is not required."<<endl;
                     }
+                    else if((request_queue[0].row_access_end*request_queue[0].put_back_end == -1) && (num_lw + num_sw > 1)){
+                        cout<<"Row Writeback id not required as the row buffer is not updated for this row."<<endl;
+                    }
                     request_queue[0].issue_msg = true;
                 }
             }
@@ -541,7 +543,7 @@ void execute(){
             d_request curr_req = request_queue[0];
             if(cycles == curr_req.request_issue && (!curr_req.issue_msg)){
                 DRAM_request = true;
-                curr_req.issue_msg = true;
+                request_queue[0].issue_msg = true;
                 print_in_buffer = true;
             }
             if(cycles == curr_req.put_back_end){
@@ -585,6 +587,9 @@ void execute(){
                 cout<<"DRAM request issued.(for memeory address "<<(curr_req.access_row*columns + curr_req.access_column)*4<<")"<<endl;
                 if(curr_req.row_access_end == -1){
                     cout<<"As row "<<request_queue[0].access_row<<" is already present in buffer, row activation is not required."<<endl;
+                }
+                else if(((curr_req.row_access_end)*(curr_req.put_back_end) == -1) && (num_lw + num_sw > 1)){
+                    cout<<"Row Writeback id not required as the row buffer is not updated for this row."<<endl;
                 }
                 request_queue[0].issue_msg = true;
             }
@@ -672,7 +677,7 @@ void execute(){
         }
         cycles++;
     }    
-    if(buffered != -1){
+    if(buffered != -1 && global_has_sw){
         if(row_delay == 0){
             cout<<"cycle "<<cycles-1<<endl;
             cout<<"DRAM: Wroteback row "<<buffered<<"."<<endl;

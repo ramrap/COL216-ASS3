@@ -11,6 +11,7 @@ vector<string> reg_name = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$
 int row_delay =10, column_delay = 2;
 int rows = (1<<10)/4;
 int columns = (1<<10)/4;
+
 struct Instruction
 {
     /* data */
@@ -61,6 +62,6 @@ bool compare_address(vector<int> v1, vector<int> v2){
         return v1[1] < v2[1];
     }
     else{
-        return v1[0] < v1[1];
+        return v1[0] < v2[0];
     }
 }
