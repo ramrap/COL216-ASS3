@@ -3,13 +3,12 @@
 using namespace std;
 
 vector<string> req_regs;
-
+vector<int> writeback_v(rows); 
 struct d_request{
     int addr = -1, access_row = -1, access_column =-1, row_access_start=-1, row_access_end = -1, column_access_start = -1, column_access_end = -1, op = -1, put_back_row = -1, put_back_start = -1, put_back_end = -1, data_bus = -1, request_issue = -1;
     string waiting_reg;
     bool issue_msg = false;
 };
-bool global_has_sw;
 vector<d_request> request_queue;
 void erase_req(int ind);
 
@@ -17,11 +16,7 @@ void update_cycle_values(){
 
     int last_buffer = request_queue[0].access_row;
     int last_cycle = request_queue[0].column_access_end;
-    
-    bool has_sw = false;
-    if(request_queue[0].op == 0){
-        has_sw = true;
-    }
+
     for(int i = 1; i < request_queue.size(); i++){
         d_request req = request_queue[i];
         req.request_issue = last_cycle + 1;
@@ -32,42 +27,23 @@ void update_cycle_values(){
             req.row_access_start = -1;
             req.column_access_start = last_cycle+1;
             req.column_access_end = last_cycle+ column_delay;
-            if(req.op == 0){
-                has_sw = true;
-            }
         }
 
         else{
-            if(has_sw){
-                req.put_back_row = last_buffer;
-                req.put_back_end = last_cycle + row_delay;
-                req.put_back_start = last_cycle + 1;
-                req.row_access_start = last_cycle+ 1 + row_delay;
-                req.row_access_end = last_cycle+  2*row_delay;
-                req.column_access_start = last_cycle+ 1 + 2*row_delay;
-                req.column_access_end = last_cycle+ 2*row_delay + column_delay;
-            }
-            else{
-                req.put_back_end = -1;
-                req.put_back_start = -1;
-                req.row_access_start = last_cycle+ 1;
-                req.row_access_end = last_cycle+ row_delay;
-                req.column_access_start = last_cycle+ 1 + row_delay;
-                req.column_access_end = last_cycle+  row_delay + column_delay;
-            }
-            if(req.op == 0){
-                has_sw = true;
-            }
-            else{
-                has_sw = false;
-            }
+            req.put_back_row = last_buffer;
+            req.put_back_end = last_cycle + row_delay;
+            req.put_back_start = last_cycle + 1;
+            req.row_access_start = last_cycle+ 1 + row_delay;
+            req.row_access_end = last_cycle+  2*row_delay;
+            req.column_access_start = last_cycle+ 1 + 2*row_delay;
+            req.column_access_end = last_cycle+ 2*row_delay + column_delay;
+
         }
         last_buffer = req.access_row;
         last_cycle = req.column_access_end;
         request_queue[i] = req;
 
     }
-    global_has_sw = has_sw;
 }
 
 
@@ -99,7 +75,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_
         }
 
         else{
-            if(last_buffer == -1 || (!global_has_sw)){
+            if(last_buffer == -1){
                 req.put_back_end = -1;
                 req.put_back_start = -1;
                 req.row_access_end = last_cycle + row_delay;
@@ -116,12 +92,6 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_
                 req.column_access_start = last_cycle+ 1 + 2*row_delay;
                 req.column_access_end = last_cycle+  2*row_delay + column_delay;
             }
-        }
-        if(req.op == 0){
-            global_has_sw = true;
-        }
-        else{
-            global_has_sw = false;
         }
         request_queue.push_back(req);
         req_regs.push_back(req.waiting_reg);
@@ -181,8 +151,8 @@ bool is_safe(Instruction temp){
 }
 
 void erase_req(int ind){
-    for(int i =ind; i<request_queue.size() -1; i++){
-        request_queue[ind] = request_queue[ind+1];
-        req_regs[ind] = req_regs[ind+1];
-    }
+        request_queue.erase(request_queue.begin() + ind);
+        req_regs.erase(req_regs.begin() + ind);
+    
+
 }

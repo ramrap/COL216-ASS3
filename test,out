@@ -1,0 +1,733 @@
+cycle 1:
+Instruction executed: addi $s0, $zero, 1000
+Updated Registers:  $s0 = 1000
+
+cycle 2:
+Instruction executed: addi $s1, $zero, 0
+Updated Registers:  $s1 = 0
+
+cycle 3:
+Instruction executed: addi $s2, $zero, 10
+Updated Registers:  $s2 = 10
+
+cycle 4:
+Instruction executed: addi $t1, $zero, 0
+Updated Registers:  $t1 = 0
+
+cycle 5:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 1
+
+cycle 6:
+Instruction executed: sw $t1, 0($s0)
+DRAM request issued.(for memeory address 1000)
+
+cycle 7:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1004
+
+cycle 8:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 1
+
+cycle 9:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 10:
+Instruction executed: bne $s3, $zero, initloop
+
+cycle 11:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 2
+
+cycle 12:
+Instruction executed: sw $t1, 0($s0)
+
+cycle 13:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1008
+
+cycle 14:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 2
+
+cycle 15:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 16:
+Instruction executed: bne $s3, $zero, initloop
+DRAM: Row 0 activated.(In cycles 7-16)
+
+cycle 17:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 3
+
+cycle 18:
+Instruction executed: sw $t1, 0($s0)
+DRAM: Column 250 accessed.(In cycles 17-18)
+Memory Address:  1000-1003 = 1
+
+cycle 19:
+Instruction executed: addi $s0, $s0, 4
+DRAM request issued.(for memeory address 1004)
+As row 0 is already present in buffer, row activation is not required.
+Updated Registers:  $s0 = 1012
+
+cycle 20:
+Instruction executed: addi $s1, $s1, 1
+DRAM: Column 251 accessed.(In cycles 19-20)
+Updated Registers:  $s1 = 3
+Memory Address:  1004-1007 = 2
+
+cycle 21:
+Instruction executed: slt $s3, $s1, $s2
+DRAM request issued.(for memeory address 1008)
+As row 0 is already present in buffer, row activation is not required.
+Updated Registers:  $s3 = 1
+
+cycle 22:
+Instruction executed: bne $s3, $zero, initloop
+DRAM: Column 252 accessed.(In cycles 21-22)
+Memory Address:  1008-1011 = 3
+
+cycle 23:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 4
+
+cycle 24:
+Instruction executed: sw $t1, 0($s0)
+DRAM request issued.(for memeory address 1012)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 25:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1016
+
+cycle 26:
+Instruction executed: addi $s1, $s1, 1
+DRAM: Column 253 accessed.(In cycles 25-26)
+Updated Registers:  $s1 = 4
+Memory Address:  1012-1015 = 4
+
+cycle 27:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 28:
+Instruction executed: bne $s3, $zero, initloop
+
+cycle 29:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 5
+
+cycle 30:
+Instruction executed: sw $t1, 0($s0)
+DRAM request issued.(for memeory address 1016)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 31:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1020
+
+cycle 32:
+Instruction executed: addi $s1, $s1, 1
+DRAM: Column 254 accessed.(In cycles 31-32)
+Updated Registers:  $s1 = 5
+Memory Address:  1016-1019 = 5
+
+cycle 33:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 34:
+Instruction executed: bne $s3, $zero, initloop
+
+cycle 35:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 6
+
+cycle 36:
+Instruction executed: sw $t1, 0($s0)
+DRAM request issued.(for memeory address 1020)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 37:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1024
+
+cycle 38:
+Instruction executed: addi $s1, $s1, 1
+DRAM: Column 255 accessed.(In cycles 37-38)
+Updated Registers:  $s1 = 6
+Memory Address:  1020-1023 = 6
+
+cycle 39:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 40:
+Instruction executed: bne $s3, $zero, initloop
+
+cycle 41:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 7
+
+cycle 42:
+Instruction executed: sw $t1, 0($s0)
+DRAM request issued.(for memeory address 1024)
+
+cycle 43:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1028
+
+cycle 44:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 7
+
+cycle 45:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 46:
+Instruction executed: bne $s3, $zero, initloop
+
+cycle 47:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 8
+
+cycle 48:
+Instruction executed: sw $t1, 0($s0)
+
+cycle 49:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1032
+
+cycle 50:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 8
+
+cycle 51:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 52:
+Instruction executed: bne $s3, $zero, initloop
+DRAM: Wroteback row 0.(In cycles 43-52)
+
+cycle 53:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 9
+
+cycle 54:
+Instruction executed: sw $t1, 0($s0)
+
+cycle 55:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1036
+
+cycle 56:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 9
+
+cycle 57:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 1
+
+cycle 58:
+Instruction executed: bne $s3, $zero, initloop
+
+cycle 59:
+Instruction executed: addi $t1, $t1, 1
+Updated Registers:  $t1 = 10
+
+cycle 60:
+Instruction executed: sw $t1, 0($s0)
+
+cycle 61:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1040
+
+cycle 62:
+Instruction executed: addi $s1, $s1, 1
+DRAM: Row 1 activated.(In cycles 53-62)
+Updated Registers:  $s1 = 10
+
+cycle 63:
+Instruction executed: slt $s3, $s1, $s2
+Updated Registers:  $s3 = 0
+
+cycle 64:
+Instruction executed: bne $s3, $zero, initloop
+DRAM: Column 0 accessed.(In cycles 63-64)
+Memory Address:  1024-1027 = 7
+
+cycle 65:
+Instruction executed: addi $s0, $zero, 1000
+DRAM request issued.(for memeory address 1028)
+As row 1 is already present in buffer, row activation is not required.
+Updated Registers:  $s0 = 1000
+
+cycle 66:
+Instruction executed: addi $s1, $zero, 0
+DRAM: Column 1 accessed.(In cycles 65-66)
+Updated Registers:  $s1 = 0
+Memory Address:  1028-1031 = 8
+
+cycle 67:
+Instruction executed: addi $s3, $zero, 0
+DRAM request issued.(for memeory address 1032)
+As row 1 is already present in buffer, row activation is not required.
+Updated Registers:  $s3 = 0
+
+cycle 68:
+Instruction executed: addi $s2, $zero, 9
+DRAM: Column 2 accessed.(In cycles 67-68)
+Updated Registers:  $s2 = 9
+Memory Address:  1032-1035 = 9
+
+cycle 69:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1036)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 70:
+Instruction executed: addi $s0, $s0, 4
+DRAM: Column 3 accessed.(In cycles 69-70)
+Updated Registers:  $s0 = 1004
+Memory Address:  1036-1039 = 10
+
+cycle 71:
+Instruction executed: lw $t1, 0($s0)
+DRAM request issued.(for memeory address 1000)
+
+cycle 72-80:
+DRAM: Wroteback row 1.(In cycles 71-80)
+
+cycle 81-90:
+DRAM: Row 0 activated.(In cycles 81-90)
+
+cycle 91-92:
+DRAM: Column 250 accessed.(In cycles 91-92)
+Updated Registers:  $t0 = 1
+
+cycle 93:
+DRAM request issued.(for memeory address 1004)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 94:
+DRAM: Column 251 accessed.(In cycles 93-94)
+Updated Registers:  $t1 = 2
+
+cycle 95:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 3
+
+cycle 96:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1004)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 97:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 1
+
+cycle 98:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 251 accessed.(In cycles 97-98)
+Updated Registers:  $s3 = 1
+Memory Address:  1004-1007 = 3
+
+cycle 99:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 100:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1004)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 101:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1008
+
+cycle 102:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 251 accessed.(In cycles 101-102)
+Updated Registers:  $t0 = 3
+
+cycle 103:
+DRAM request issued.(for memeory address 1008)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 104:
+DRAM: Column 252 accessed.(In cycles 103-104)
+Updated Registers:  $t1 = 3
+
+cycle 105:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 6
+
+cycle 106:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1008)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 107:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 2
+
+cycle 108:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 252 accessed.(In cycles 107-108)
+Updated Registers:  $s3 = 1
+Memory Address:  1008-1011 = 6
+
+cycle 109:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 110:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1008)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 111:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1012
+
+cycle 112:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 252 accessed.(In cycles 111-112)
+Updated Registers:  $t0 = 6
+
+cycle 113:
+DRAM request issued.(for memeory address 1012)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 114:
+DRAM: Column 253 accessed.(In cycles 113-114)
+Updated Registers:  $t1 = 4
+
+cycle 115:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 10
+
+cycle 116:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1012)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 117:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 3
+
+cycle 118:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 253 accessed.(In cycles 117-118)
+Updated Registers:  $s3 = 1
+Memory Address:  1012-1015 = 10
+
+cycle 119:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 120:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1012)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 121:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1016
+
+cycle 122:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 253 accessed.(In cycles 121-122)
+Updated Registers:  $t0 = 10
+
+cycle 123:
+DRAM request issued.(for memeory address 1016)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 124:
+DRAM: Column 254 accessed.(In cycles 123-124)
+Updated Registers:  $t1 = 5
+
+cycle 125:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 15
+
+cycle 126:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1016)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 127:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 4
+
+cycle 128:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 254 accessed.(In cycles 127-128)
+Updated Registers:  $s3 = 1
+Memory Address:  1016-1019 = 15
+
+cycle 129:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 130:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1016)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 131:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1020
+
+cycle 132:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 254 accessed.(In cycles 131-132)
+Updated Registers:  $t0 = 15
+
+cycle 133:
+DRAM request issued.(for memeory address 1020)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 134:
+DRAM: Column 255 accessed.(In cycles 133-134)
+Updated Registers:  $t1 = 6
+
+cycle 135:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 21
+
+cycle 136:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1020)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 137:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 5
+
+cycle 138:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 255 accessed.(In cycles 137-138)
+Updated Registers:  $s3 = 1
+Memory Address:  1020-1023 = 21
+
+cycle 139:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 140:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1020)
+As row 0 is already present in buffer, row activation is not required.
+
+cycle 141:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1024
+
+cycle 142:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 255 accessed.(In cycles 141-142)
+Updated Registers:  $t0 = 21
+
+cycle 143:
+DRAM request issued.(for memeory address 1024)
+
+cycle 144-152:
+DRAM: Row 1 activated.(In cycles 143-152)
+
+cycle 153-154:
+DRAM: Column 0 accessed.(In cycles 153-154)
+Updated Registers:  $t1 = 7
+
+cycle 155:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 28
+
+cycle 156:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1024)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 157:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 6
+
+cycle 158:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 0 accessed.(In cycles 157-158)
+Updated Registers:  $s3 = 1
+Memory Address:  1024-1027 = 28
+
+cycle 159:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 160:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1024)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 161:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1028
+
+cycle 162:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 0 accessed.(In cycles 161-162)
+Updated Registers:  $t0 = 28
+
+cycle 163:
+DRAM request issued.(for memeory address 1028)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 164:
+DRAM: Column 1 accessed.(In cycles 163-164)
+Updated Registers:  $t1 = 8
+
+cycle 165:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 36
+
+cycle 166:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1028)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 167:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 7
+
+cycle 168:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 1 accessed.(In cycles 167-168)
+Updated Registers:  $s3 = 1
+Memory Address:  1028-1031 = 36
+
+cycle 169:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 170:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1028)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 171:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1032
+
+cycle 172:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 1 accessed.(In cycles 171-172)
+Updated Registers:  $t0 = 36
+
+cycle 173:
+DRAM request issued.(for memeory address 1032)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 174:
+DRAM: Column 2 accessed.(In cycles 173-174)
+Updated Registers:  $t1 = 9
+
+cycle 175:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 45
+
+cycle 176:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1032)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 177:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 8
+
+cycle 178:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 2 accessed.(In cycles 177-178)
+Updated Registers:  $s3 = 1
+Memory Address:  1032-1035 = 45
+
+cycle 179:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 180:
+Instruction executed: lw $t0, 0($s0)
+DRAM request issued.(for memeory address 1032)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 181:
+Instruction executed: addi $s0, $s0, 4
+Updated Registers:  $s0 = 1036
+
+cycle 182:
+Instruction executed: lw $t1, 0($s0)
+DRAM: Column 2 accessed.(In cycles 181-182)
+Updated Registers:  $t0 = 45
+
+cycle 183:
+DRAM request issued.(for memeory address 1036)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 184:
+DRAM: Column 3 accessed.(In cycles 183-184)
+Updated Registers:  $t1 = 10
+
+cycle 185:
+Instruction executed: add $t2, $t0, $t1
+Updated Registers:  $t2 = 55
+
+cycle 186:
+Instruction executed: sw $t2, 0($s0)
+DRAM request issued.(for memeory address 1036)
+As row 1 is already present in buffer, row activation is not required.
+
+cycle 187:
+Instruction executed: addi $s1, $s1, 1
+Updated Registers:  $s1 = 9
+
+cycle 188:
+Instruction executed: slt $s3, $s1, $s2
+DRAM: Column 3 accessed.(In cycles 187-188)
+Updated Registers:  $s3 = 0
+Memory Address:  1036-1039 = 55
+
+cycle 189:
+Instruction executed: bne $s3, $zero, sumloop
+
+cycle 190-199
+DRAM: Wroteback row 1.(In cycles 190-199)
+
+
+Program Executed Successfully.
+
+*****Statistics***** 
+Total no. of clock cycles: 199
+Total number of buffer updates: 23
+Number of times instruction were executed: 
+add: 9
+addi: 56
+sub: 0
+mul: 0
+bne: 12
+beq: 7
+j: 0
+slt: 19
+lw: 18
+sw: 19
+
+Register Values After Execution
+0  0  0  0  0  0  0  0  2d  a  37  0  0  0  0  0  40c  9  9  0  0  0  0  0  0  0  0  0  0  ffffc  0  0  
+
+Used Data Values During Execution
+1000-1003: 1
+1004-1007: 3
+1008-1011: 6
+1012-1015: a
+1016-1019: f
+1020-1023: 15
+1024-1027: 1c
+1028-1031: 24
+1032-1035: 2d
+1036-1039: 37
