@@ -223,6 +223,7 @@ void update_cycle_values_between(d_request req){
     request_queue[0].column_access_start = req.column_access_start;
     request_queue[0].row_access_end = req.row_access_end;
     request_queue[0].row_access_start = req.row_access_start;
+    request_queue[0].request_issue = req.request_issue;
     update_cycle_values();
 }
 

@@ -536,7 +536,7 @@ void execute(){
             cout<<"Instruction executed (PC = "<<temp_pc*4<<"): "<<oinst[temp.line -1]<<endl;
             if(temp.kw == "sw" || temp.kw == "lw"){
                 if(request_queue.size() == 1){
-                    cout<<"DRAM request issued.(for memeory address "<<(request_queue[0].access_row*columns + request_queue[0].access_column)*4<<")"<<endl;
+                    cout<<"DRAM request issued.(for memory address "<<(request_queue[0].access_row*columns + request_queue[0].access_column)*4<<")"<<endl;
                     if(request_queue[0].row_access_end == -1){
                         cout<<"As row "<<request_queue[0].access_row<<" is already present in buffer, row activation is not required."<<endl;
                     }
@@ -597,7 +597,7 @@ void execute(){
                 }
             }
             if(DRAM_request){
-                cout<<"DRAM request issued.(for memeory address "<<(curr_req.access_row*columns + curr_req.access_column)*4<<")"<<endl;
+                cout<<"DRAM request issued.(for memory address "<<(curr_req.access_row*columns + curr_req.access_column)*4<<")"<<endl;
                 if(curr_req.row_access_end == -1){
                     cout<<"As row "<<request_queue[0].access_row<<" is already present in buffer, row activation is not required."<<endl;
                 }
@@ -683,7 +683,6 @@ void execute(){
                     }
                     if(can_reorder){
                         if(reord_reg1 != "null"){
-                            cout<<"yresyes";
                             reord_reg(reord_reg1);
                         }
                         if(reord_reg2 != "null"){
