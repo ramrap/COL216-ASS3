@@ -266,7 +266,7 @@ void BEQ(Instruction I,ll &PC){
     if(registers[vars[0]] == registers[vars[1]]){
         PC=labels[vars[2]];
         if (PC >= inst_size){
-            throw runtime_error("attempt to execute non-instruction at PC: "+llToHex(PC*4));
+            throw runtime_error("attempt to execute non-instruction at PC: "+ (PC*4));
         }
     }
     else{
@@ -283,7 +283,7 @@ void BNE(Instruction I,ll &PC){
     else{
         PC = labels[vars[2]];
         if (PC >= inst_size){
-            throw runtime_error("attempt to execute non-instruction at PC: "+llToHex(PC*4));
+            throw runtime_error("attempt to execute non-instruction at PC: "+ (PC*4));
         }
     }
 }
@@ -300,7 +300,7 @@ void JUMP(Instruction I,ll &PC){
     vector<string> vars = I.vars;
     PC = labels[vars[0]];
     if (PC >= inst_size){
-        throw runtime_error("attempt to execute non-instruction at PC: "+llToHex(PC*4));
+        throw runtime_error("attempt to execute non-instruction at PC: "+ (PC*4));
     }
 }
 
