@@ -723,7 +723,7 @@ void execute(){
     cout<<"Register Values After Execution"<<endl;
     for (int i =0; i<32; i++) {   
         string reg = reg_name[i];    
-        cout << int32ToHex(registers[reg])<<"  ";
+        cout << (registers[reg])<<"  ";
     }
     cout<<endl<<endl;
     
@@ -733,11 +733,11 @@ void execute(){
         for(int i = 0; i < used_mem.size(); i++){
             if(i != 0){
                 if(used_mem[i] != used_mem[i-1]){
-                    cout<<(used_mem[i][0]*columns + used_mem[i][1])*4<<"-"<<(used_mem[i][0]*columns + used_mem[i][1])*4 + 3<<": "<<int32ToHex(memory[used_mem[i][0]][used_mem[i][1]])<<endl;
+                    cout<<(used_mem[i][0]*columns + used_mem[i][1])*4<<"-"<<(used_mem[i][0]*columns + used_mem[i][1])*4 + 3<<": "<<(memory[used_mem[i][0]][used_mem[i][1]])<<endl;
                 }
             }
             else{
-                cout<<(used_mem[i][0]*columns + used_mem[i][1])*4<<"-"<<(used_mem[i][0]*columns + used_mem[i][1])*4 + 3<<": "<<int32ToHex(memory[used_mem[i][0]][used_mem[i][1]])<<endl;
+                cout<<(used_mem[i][0]*columns + used_mem[i][1])*4<<"-"<<(used_mem[i][0]*columns + used_mem[i][1])*4 + 3<<": "<<(memory[used_mem[i][0]][used_mem[i][1]])<<endl;
             }
         }
     }
