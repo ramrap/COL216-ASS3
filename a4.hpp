@@ -202,3 +202,55 @@ void erase_req(int ind){
     
 
 }
+
+int reg_blocked(string reg){
+    for(auto req: request_queue){
+        if(req.op==1){
+            if(reg == req.waiting_reg){
+                return req.access_row;
+            }
+        }
+    }
+    return -1;
+}
+
+void update_cycle_values_between(d_request req){
+    int row = req.access_row;
+    request_queue[0].put_back_row = req.put_back_row;
+    request_queue[0].put_back_end = req.put_back_end;
+    request_queue[0].put_back_start = req.put_back_start;
+    request_queue[0].column_access_end = req.column_access_end;
+    request_queue[0].column_access_start = req.column_access_start;
+    request_queue[0].row_access_end = req.row_access_end;
+    request_queue[0].row_access_start = req.row_access_start;
+    update_cycle_values();
+}
+
+void reord_reg(string reg){
+    int index = -1;
+    int row = request_queue[0].access_row;
+    for(int i =0; i<request_queue.size(); i++){
+        if(request_queue[i].op ==1 && request_queue[i].waiting_reg == reg){
+            index = i;
+            break;
+        }
+    }
+    if(index!=-1){
+        d_request origin_req = request_queue[0];
+        int origin_ind =0;
+        int addr = request_queue[index].addr;
+        while(index>=origin_ind){
+            if(request_queue[index].addr == addr){
+                d_request req = request_queue[index];
+                erase_req(index);
+                request_queue.insert(request_queue.begin()+ 0, req);
+                req_regs.insert(req_regs.begin()+0,req.waiting_reg);
+                origin_ind++;
+            }
+            else{
+                index--;
+            }
+        }
+        update_cycle_values_between(origin_req);
+    }
+}

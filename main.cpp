@@ -364,14 +364,16 @@ void execute(){
     bool to_print = false;
 
     int curr_req_end = -1;
+    Instruction temp;
+    int temp_pc;
     if(request_queue.size() != 0){
         curr_req_end = request_queue[0].column_access_end;
     }
     // Increasing PC until we reach last line
     while(PC!=inst_size || cycles <= curr_req_end){
         if(PC != inst_size){
-        Instruction temp = instruction_list[PC];
-        int temp_pc = PC;
+        temp = instruction_list[PC];
+        temp_pc = PC;
         string operation =temp.kw;
         // cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl;
 
@@ -640,6 +642,58 @@ void execute(){
                 req_regs.erase(req_regs.begin());
                 if(request_queue.size() == 0){
                     in_buffer = false;
+                }
+                else if(temp_pc == PC && PC != inst_size){
+                    bool can_reorder = false;
+                    string reord_reg1 = "null";
+                    string reord_reg2 = "null";
+                    string reord_reg3 = "null";
+                    if(temp.kw == "lw"){
+                        if(reg_blocked(temp.vars[1]) == request_queue[0].access_row){
+                            can_reorder = true;
+                            reord_reg1 = temp.vars[1];
+                        }
+                    }
+                    else{
+                        bool broke = false;
+                        for(int i = 0; i<temp.vars.size(); i++){
+                            int x = reg_blocked(temp.vars[i]);
+                            if(x == request_queue[0].access_row ){
+                                if(i == 0){
+                                    reord_reg1 = temp.vars[i];
+                                }
+                                if(i == 1){
+                                    reord_reg2 = temp.vars[i];
+                                }
+                                if(i == 2){
+                                    reord_reg3 = temp.vars[i];
+                                }
+                                continue;
+                            }
+                            else if(x == -1){
+                                continue;
+                            }
+                            broke = true;
+                            break;
+                            
+                        }
+                        if((!broke)){
+                            can_reorder = true;
+                        }
+                    }
+                    if(can_reorder){
+                        if(reord_reg1 != "null"){
+                            cout<<"yresyes";
+                            reord_reg(reord_reg1);
+                        }
+                        if(reord_reg2 != "null"){
+                            reord_reg(reord_reg2);
+                        }
+                        if(reord_reg3 != "null"){
+                            reord_reg(reord_reg3);
+                        }  
+                    }
+                    
                 }
             }
 
