@@ -4,48 +4,39 @@ using namespace std;
 
 vector<string> req_regs;
 vector<int> writeback_v(rows); 
+int put_back_end = -1, put_back_start = -1, row_access_end = -1, row_access_start = -1, column_access_start = -1, column_access_end = -1, put_back_row = -1, request_issue_cycle= -1;
 struct d_request{
-    int addr = -1, access_row = -1, access_column =-1, row_access_start=-1, row_access_end = -1, column_access_start = -1, column_access_end = -1, op = -1, put_back_row = -1, put_back_start = -1, put_back_end = -1, data_bus = -1, request_issue = -1;
+    int addr = -1, access_row = -1, access_column =-1, op = -1, data_bus = -1;
     string waiting_reg;
     bool issue_msg = false;
 };
 vector<d_request> request_queue;
 void erase_req(int ind);
 
-void update_cycle_values(){
+void assign_cycle_values(int last_buffer, int last_cycle){
+    d_request req = request_queue[0];
+    request_issue_cycle = last_cycle + 1;
+    if(last_buffer == req.access_row){
+        put_back_end = -1;
+        put_back_start = -1;
+        row_access_end = -1;
+        row_access_start = -1;
+        column_access_start = last_cycle+1;
+        column_access_end = last_cycle+ column_delay;
+    }
 
-    int last_buffer = request_queue[0].access_row;
-    int last_cycle = request_queue[0].column_access_end;
-
-    for(int i = 1; i < request_queue.size(); i++){
-        d_request req = request_queue[i];
-        req.request_issue = last_cycle + 1;
-        if(last_buffer == req.access_row){
-            req.put_back_end = -1;
-            req.put_back_start = -1;
-            req.row_access_end = -1;
-            req.row_access_start = -1;
-            req.column_access_start = last_cycle+1;
-            req.column_access_end = last_cycle+ column_delay;
-        }
-
-        else{
-            req.put_back_row = last_buffer;
-            req.put_back_end = last_cycle + row_delay;
-            req.put_back_start = last_cycle + 1;
-            req.row_access_start = last_cycle+ 1 + row_delay;
-            req.row_access_end = last_cycle+  2*row_delay;
-            req.column_access_start = last_cycle+ 1 + 2*row_delay;
-            req.column_access_end = last_cycle+ 2*row_delay + column_delay;
-
-        }
-        last_buffer = req.access_row;
-        last_cycle = req.column_access_end;
-        request_queue[i] = req;
+    else{
+        put_back_row = last_buffer;
+        put_back_end = last_cycle + row_delay;
+        put_back_start = last_cycle + 1;
+        row_access_start = last_cycle+ 1 + row_delay;
+        row_access_end = last_cycle+  2*row_delay;
+        column_access_start = last_cycle+ 1 + 2*row_delay;
+        column_access_end = last_cycle+ 2*row_delay + column_delay;
 
     }
-}
 
+}
 
 void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_bus_value = -1){
     string inst = I.kw;
@@ -64,33 +55,33 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_
         req.op =1;
     }
     if(request_queue.size() == 0){
-        req.request_issue = last_cycle + 1;
+        request_issue_cycle = last_cycle + 1;
         if(last_buffer == req.access_row){
-            req.put_back_end = -1;
-            req.put_back_start = -1;
-            req.row_access_end = -1;
-            req.row_access_start = -1;
-            req.column_access_start = last_cycle+1;
-            req.column_access_end = last_cycle+ column_delay;
+            put_back_end = -1;
+            put_back_start = -1;
+            row_access_end = -1;
+            row_access_start = -1;
+            column_access_start = last_cycle+1;
+            column_access_end = last_cycle+ column_delay;
         }
 
         else{
             if(last_buffer == -1){
-                req.put_back_end = -1;
-                req.put_back_start = -1;
-                req.row_access_end = last_cycle + row_delay;
-                req.row_access_start = last_cycle + 1;
-                req.column_access_start = last_cycle+ 1 + row_delay;
-                req.column_access_end = last_cycle+ row_delay + column_delay;
+                put_back_end = -1;
+                put_back_start = -1;
+                row_access_end = last_cycle + row_delay;
+                row_access_start = last_cycle + 1;
+                column_access_start = last_cycle+ 1 + row_delay;
+                column_access_end = last_cycle+ row_delay + column_delay;
             }
             else{
-                req.put_back_row = last_buffer;
-                req.put_back_end = last_cycle + row_delay;
-                req.put_back_start = last_cycle + 1;
-                req.row_access_start = last_cycle+ 1 + row_delay;
-                req.row_access_end = last_cycle+ + 2*row_delay;
-                req.column_access_start = last_cycle+ 1 + 2*row_delay;
-                req.column_access_end = last_cycle+  2*row_delay + column_delay;
+                put_back_row = last_buffer;
+                put_back_end = last_cycle + row_delay;
+                put_back_start = last_cycle + 1;
+                row_access_start = last_cycle+ 1 + row_delay;
+                row_access_end = last_cycle+ + 2*row_delay;
+                column_access_start = last_cycle+ 1 + 2*row_delay;
+                column_access_end = last_cycle+  2*row_delay + column_delay;
             }
         }
         request_queue.push_back(req);
@@ -165,7 +156,6 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_
         request_queue.insert(request_queue.begin() + index, req);
         req_regs.insert(req_regs.begin() + index, req.waiting_reg);
     }
-    update_cycle_values();
     return;
 
     
@@ -214,18 +204,6 @@ int reg_blocked(string reg){
     return -1;
 }
 
-void update_cycle_values_between(d_request req){
-    int row = req.access_row;
-    request_queue[0].put_back_row = req.put_back_row;
-    request_queue[0].put_back_end = req.put_back_end;
-    request_queue[0].put_back_start = req.put_back_start;
-    request_queue[0].column_access_end = req.column_access_end;
-    request_queue[0].column_access_start = req.column_access_start;
-    request_queue[0].row_access_end = req.row_access_end;
-    request_queue[0].row_access_start = req.row_access_start;
-    request_queue[0].request_issue = req.request_issue;
-    update_cycle_values();
-}
 
 void reord_reg(string reg){
     int index = -1;
@@ -252,6 +230,5 @@ void reord_reg(string reg){
                 index--;
             }
         }
-        update_cycle_values_between(origin_req);
     }
 }

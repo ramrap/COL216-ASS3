@@ -366,11 +366,8 @@ void execute(){
     int curr_req_end = -1;
     Instruction temp;
     int temp_pc;
-    if(request_queue.size() != 0){
-        curr_req_end = request_queue[0].column_access_end;
-    }
     // Increasing PC until we reach last line
-    while(PC!=inst_size || cycles <= curr_req_end){
+    while(PC!=inst_size || cycles <= column_access_end){
         if(PC != inst_size){
         temp = instruction_list[PC];
         temp_pc = PC;
@@ -537,7 +534,7 @@ void execute(){
             if(temp.kw == "sw" || temp.kw == "lw"){
                 if(request_queue.size() == 1){
                     cout<<"DRAM request issued.(for memory address "<<(request_queue[0].access_row*columns + request_queue[0].access_column)*4<<")"<<endl;
-                    if(request_queue[0].row_access_end == -1){
+                    if(row_access_end == -1){
                         cout<<"As row "<<request_queue[0].access_row<<" is already present in buffer, row activation is not required."<<endl;
                     }
                     request_queue[0].issue_msg = true;
@@ -554,23 +551,23 @@ void execute(){
         if(in_buffer){
             bool DRAM_request = false, put_back_done = false, row_access_done = false, column_access_done = false, print_in_buffer = false;
             d_request curr_req = request_queue[0];
-            if(cycles == curr_req.request_issue && (!curr_req.issue_msg)){
+            if(cycles == request_issue_cycle && (!curr_req.issue_msg)){
                 DRAM_request = true;
                 request_queue[0].issue_msg = true;
                 print_in_buffer = true;
             }
-            if(cycles == curr_req.put_back_end){
+            if(cycles == put_back_end){
                 put_back_done = true;
                 print_in_buffer = true;
             }
-            if (cycles == curr_req.row_access_end){
+            if (cycles == row_access_end){
                 buffer_row = memory[curr_req.access_row];
                 buffered = curr_req.access_row;
                 buffer_updates++;
                 row_access_done = true;
                 print_in_buffer = true;
             }
-            if(cycles == curr_req.column_access_end){
+            if(cycles == column_access_end){
                 if(curr_req.op ==0){
                     memory[curr_req.access_row][curr_req.access_column] = curr_req.data_bus;
                     vector<int> temp = {curr_req.access_row, curr_req.access_column};
@@ -598,18 +595,18 @@ void execute(){
             }
             if(DRAM_request){
                 cout<<"DRAM request issued.(for memory address "<<(curr_req.access_row*columns + curr_req.access_column)*4<<")"<<endl;
-                if(curr_req.row_access_end == -1){
+                if(row_access_end == -1){
                     cout<<"As row "<<request_queue[0].access_row<<" is already present in buffer, row activation is not required."<<endl;
                 }
                 request_queue[0].issue_msg = true;
             }
             if(put_back_done){
-                cout<<"DRAM: Wroteback row "<<curr_req.put_back_row<<"."; 
-                if(curr_req.put_back_start < curr_req.put_back_end){
-                    cout<<"(In cycles "<<curr_req.put_back_start<<"-"<<curr_req.put_back_end<<")"<<endl;
+                cout<<"DRAM: Wroteback row "<<put_back_row<<"."; 
+                if(put_back_start < put_back_end){
+                    cout<<"(In cycles "<<put_back_start<<"-"<<put_back_end<<")"<<endl;
                 }
-                else if(curr_req.put_back_end == curr_req.put_back_start){
-                    cout<<"(In cycle "<<curr_req.put_back_start<<")"<<endl;
+                else if(put_back_end == put_back_start){
+                    cout<<"(In cycle "<<put_back_start<<")"<<endl;
                 }
                 else{
                     cout<<endl;
@@ -617,11 +614,11 @@ void execute(){
             }
             if(row_access_done){
                 cout<<"DRAM: Row "<<curr_req.access_row<<" activated."; 
-                if(curr_req.row_access_start < curr_req.row_access_end){
-                    cout<<"(In cycles "<<curr_req.row_access_start<<"-"<<curr_req.row_access_end<<")"<<endl;
+                if(row_access_start < row_access_end){
+                    cout<<"(In cycles "<<row_access_start<<"-"<<row_access_end<<")"<<endl;
                 }
-                else if(curr_req.row_access_end == curr_req.row_access_start){
-                    cout<<"(In cycle "<<curr_req.row_access_start<<")"<<endl;
+                else if(row_access_end == row_access_start){
+                    cout<<"(In cycle "<<row_access_start<<")"<<endl;
                 }
                 else{
                     cout<<endl;
@@ -629,11 +626,11 @@ void execute(){
             }
             if(column_access_done){
                 cout<<"DRAM: Column "<<curr_req.access_column<<" accessed."; 
-                if(curr_req.column_access_start < curr_req.column_access_end){
-                    cout<<"(In cycles "<<curr_req.column_access_start<<"-"<<curr_req.column_access_end<<")"<<endl;
+                if(column_access_start < column_access_end){
+                    cout<<"(In cycles "<<column_access_start<<"-"<<column_access_end<<")"<<endl;
                 }
-                else if(curr_req.column_access_end == curr_req.column_access_start){
-                    cout<<"(In cycle "<<curr_req.column_access_start<<")"<<endl;
+                else if(column_access_end == column_access_start){
+                    cout<<"(In cycle "<<column_access_start<<")"<<endl;
                 }
                 else{
                     cout<<endl;
@@ -694,6 +691,9 @@ void execute(){
                     }
                     
                 }
+                if(request_queue.size() != 0){
+                    assign_cycle_values(buffered, cycles);
+                }
             }
 
         }
@@ -733,9 +733,6 @@ void execute(){
         to_print = false;
         changed_regs.clear();
         changed_mem.clear();
-        if(request_queue.size() != 0){
-            curr_req_end = request_queue[0].column_access_end;
-        }
         cycles++;
     }    
     if(buffered != -1){
