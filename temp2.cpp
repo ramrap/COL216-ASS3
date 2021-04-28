@@ -16,7 +16,7 @@ using namespace std;
 // build with: g++ main.cpp -o main -std=c++14
 //./main > test.out
 ll max_size = (1 << 20) / 4;
-vector<int> buffer_updates(100, 0);
+int buffer_updates=0;
 bool in_buffer = false;
 bool no_blocking = true;
 ll occupied_mem = 0;
@@ -31,7 +31,7 @@ vector<vector<pair<string, ll>>> inst(100);
 vector<vector<Instruction>> instruction_list(100);
 vector<vector<string>> oinst(100);
 int32_t *buffer_row = NULL;
-vector<int> buffered(100, -1);
+int buffered = -1;
 vector<vector<int>> used_mem;
 vector<vector<int>> changed_mem;
 vector<string> changed_regs;
@@ -367,7 +367,7 @@ void LW(Instruction I, int cycles, int core_num)
 
     // --------------------------------------CHANGED----------------------------------------
     in_buffer = true;
-    add_req(I, addr, buffered[core_num], cycles, core_num);
+    add_req(I, addr, buffered, cycles, core_num);
 
     // --------------------------------------CHANGED----------------------------------------
 }
@@ -393,7 +393,7 @@ void SW(Instruction I, int cycles, int core_num)
 
     // --------------------------------------CHANGED----------------------------------------
     in_buffer = true;
-    add_req(I, addr, buffered[core_num], cycles, core_num, registers[vars[0]]);
+    add_req(I, addr, buffered, cycles, core_num, registers[vars[0]]);
     // --------------------------------------CHANGED----------------------------------------
 
     // cout<<row_access_end<<" "<<column_access_end<<endl;
@@ -407,7 +407,7 @@ void execute()
     int fl = 1, last = -1;
     vector<int> num_add(100, 0), num_addi(100, 0), num_j(100, 0), num_sub(100, 0), num_mul(100, 0), num_bne(100, 0), num_beq(100, 0), num_lw(100, 0), num_sw(100, 0), num_slt(100, 0);
 
-    vector<int> cycles(100, 1);
+    int cycles=1;
     vector<int> PC(100, 0);
 
     bool to_print = false;
@@ -417,13 +417,14 @@ void execute()
     int temp_pc;
 
     int flag = 1;
-    while (flag)
+    while (cycles<=simulation_time)
     {
 
+        
         for (int core_num = 0; core_num < num_of_cores; core_num++)
         {
 
-            if (PC[core_num] != inst_size[core_num] && cycles[core_num]<=simulation_time)
+            if (PC[core_num] != inst_size[core_num] && cycles<=simulation_time)
             {
                 temp = instruction_list[core_num][PC[core_num]];
                 temp_pc = PC[core_num];
@@ -579,7 +580,7 @@ void execute()
                     {
                         if (is_lw_safe(temp, core_num))
                         {
-                            SW(temp, cycles[core_num], core_num);
+                            SW(temp, cycles, core_num);
                             num_sw[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -587,7 +588,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        SW(temp, cycles[core_num], core_num);
+                        SW(temp, cycles, core_num);
                         num_sw[core_num]++;
                         PC[core_num]++;
                         to_print = true;
@@ -599,7 +600,7 @@ void execute()
                     {
                         if (is_safe(temp, core_num))
                         {
-                            SW(temp, cycles[core_num], core_num);
+                            SW(temp, cycles, core_num);
                             num_sw[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -607,7 +608,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        SW(temp, cycles[core_num], core_num);
+                        SW(temp, cycles, core_num);
                         num_sw[core_num]++;
                         PC[core_num]++;
                         to_print = true;
@@ -615,8 +616,8 @@ void execute()
                 }
                 if (to_print)
                 {
-                    cout << "cycle " << cycles[core_num] << " in Core : " << core_num + 1 << endl;
-                    last = cycles[core_num];
+                    cout << "cycle " << cycles << " in Core : " << core_num + 1 << endl;
+                    last = cycles;
                     cout << "Instruction executed (PC = " << temp_pc * 4 << "): " << oinst[core_num][temp.line - 1] << endl;
                     if (temp.kw == "sw" || temp.kw == "lw")
                     {
@@ -637,32 +638,35 @@ void execute()
                 }
             }
 
-            //------------------------------------------------------------------------------------------------------------------------------------------------
+
+        }
+
+     //------------------------------------------------------------------------------------------------------------------------------------------------
             //---------------------------------------------------------------------C H A N G E D--------------------------------------------------------------
             if (in_buffer)
             {
                 bool DRAM_request = false, put_back_done = false, row_access_done = false, column_access_done = false, print_in_buffer = false;
                 d_request curr_req = request_queue[0];
-                if (cycles[core_num] == request_issue_cycle && (!curr_req.issue_msg))
+                if (cycles == request_issue_cycle && (!curr_req.issue_msg))
                 {
                     DRAM_request = true;
                     request_queue[0].issue_msg = true;
                     print_in_buffer = true;
                 }
-                if (cycles[core_num] == put_back_end)
+                if (cycles == put_back_end)
                 {
                     put_back_done = true;
                     print_in_buffer = true;
                 }
-                if (cycles[core_num] == row_access_end)
+                if (cycles == row_access_end)
                 {
                     buffer_row = memory[curr_req.access_row];
-                    buffered[core_num] = curr_req.access_row;
-                    buffer_updates[core_num]++;
+                    buffered = curr_req.access_row;
+                    buffer_updates++;
                     row_access_done = true;
                     print_in_buffer = true;
                 }
-                if (cycles[core_num] == column_access_end)
+                if (cycles == column_access_end)
                 {
                     if (curr_req.op == 0)
                     {
@@ -670,7 +674,7 @@ void execute()
                         vector<int> temp = {curr_req.access_row, curr_req.access_column};
                         changed_mem.push_back(temp);
                         used_mem.push_back(temp);
-                        buffer_updates[core_num]++;
+                        buffer_updates++;
                     }
                     else
                     {
@@ -683,15 +687,15 @@ void execute()
                 if (!to_print && print_in_buffer)
                 {
                     to_print = true;
-                    if (last == cycles[core_num] - 1)
+                    if (last == cycles - 1)
                     {
-                        cout << "cycle " << cycles[core_num] << ":" << endl;
-                        last = cycles[core_num];
+                        cout << "cycle " << cycles << ":" << endl;
+                        last = cycles;
                     }
                     else
                     {
-                        cout << "cycle " << last + 1 << "-" << cycles[core_num] << ":" << endl;
-                        last = cycles[core_num];
+                        cout << "cycle " << last + 1 << "-" << cycles << ":" << endl;
+                        last = cycles;
                     }
                 }
                 if (DRAM_request)
@@ -721,7 +725,7 @@ void execute()
                 }
                 if (row_access_done)
                 {
-                    cout << "DRAM: Row " << curr_req.access_row << " activated. for core :"<<core_num+1;
+                    cout << "DRAM: Row " << curr_req.access_row ;
                     if (row_access_start < row_access_end)
                     {
                         cout << "(In cycles " << row_access_start << "-" << row_access_end << ")" << endl;
@@ -737,7 +741,7 @@ void execute()
                 }
                 if (column_access_done)
                 {
-                    cout << "DRAM: Column " << curr_req.access_column << " accessed. for core :"<<core_num+1;
+                    cout << "DRAM: Column " << curr_req.access_column;
                     if (column_access_start < column_access_end)
                     {
                         cout << "(In cycles " << column_access_start << "-" << column_access_end << ")" << endl;
@@ -759,14 +763,15 @@ void execute()
                     // else if removed from here
                     if (request_queue.size() != 0)
                     {
-                        assign_cycle_values(buffered[core_num], cycles[core_num]);
+                        assign_cycle_values(buffered, cycles);
                     }
                 }
             }
             //-----------------------------------------------------------------------------------------------------------------------------------------------------
             //-----------------------------------------------------------------------------------------------------------------------------------------------------
-
-            registers_core[core_num][registers["$zero"]] = 0;
+            for(int i=0;i<num_of_cores;i++){
+            registers_core[i][registers["$zero"]] = 0;
+            }
             if (changed_regs.size() != 0)
             {
                 sort(changed_regs.begin(), changed_regs.end());
@@ -802,49 +807,44 @@ void execute()
             to_print = false;
             changed_regs.clear();
             changed_mem.clear();
-            cycles[core_num]++;
+            cycles++;
         }
     
-        int temp_fl=0;
-        for( int i = 0; i < num_of_cores ; i++ ){
-            if( (cycles[i]<simulation_time) && (PC[i]<inst_size[i])){
-                temp_fl=1;
-            }
-        }
-        flag=temp_fl;
+       
     
-    }
+    
     // Increasing PC until we reach last line
+     if (buffered != -1)
+        {
+            if (row_delay == 0)
+            {
+                cout << "cycle " << cycles - 1 <<endl;
+                cout << "DRAM: Wroteback row " << buffered << "." << endl;
+            }
+            else if (row_delay == 1)
+            {
+                cout << "cycle " << cycles << endl;
+                cout << "DRAM: Wroteback row " << buffered << ".(In cycle " << cycles << ")" << endl;
+            }
+            else
+            {
+                cout << "cycle " << cycles << "-" << cycles + row_delay - 1 << endl;
+                cout << "DRAM: Wroteback row " << buffered << ".(In cycles " << cycles << "-" << cycles + row_delay - 1 << ")" << endl;
+            }
+            cycles = cycles + row_delay;
+            cout << endl;
+        }
+
 
     for (int core_num = 0; core_num < num_of_cores; core_num++)
     {
 
-        if (buffered[core_num] != -1)
-        {
-            if (row_delay == 0)
-            {
-                cout << "cycle " << cycles[core_num] - 1 <<"in core: "<<core_num+1<< endl;
-                cout << "DRAM: Wroteback row " << buffered[core_num] << "." << endl;
-            }
-            else if (row_delay == 1)
-            {
-                cout << "cycle " << cycles[core_num] <<"in core: "<<core_num+1<< endl;
-                cout << "DRAM: Wroteback row " << buffered[core_num] << ".(In cycle " << cycles[core_num] << ")" << endl;
-            }
-            else
-            {
-                cout << "cycle " << cycles[core_num] << "-" << cycles[core_num] + row_delay - 1 << "in core: "<<core_num+1<< endl;
-                cout << "DRAM: Wroteback row " << buffered[core_num] << ".(In cycles " << cycles[core_num] << "-" << cycles[core_num] + row_delay - 1 << ")" << endl;
-            }
-            cycles[core_num] = cycles[core_num] + row_delay;
-            cout << endl;
-        }
-
+       
         cout << endl
              << "Program Executed Successfully for Core Number : " << core_num + 1 << ".\n\n";
         cout << "*****Statistics***** \n";
         // cout << "Total no. of clock cycles: " << cycles - 1 << endl;
-        cout << "Total number of buffer updates: " << buffer_updates[core_num] << endl;
+        cout << "Total number of buffer updates: " << buffer_updates << endl;
         cout << "Number of times instruction were executed: \n";
         cout << "Total number of Instructions executed: " << num_add[core_num] + num_addi[core_num] + num_sub[core_num] + num_mul[core_num] + num_bne[core_num] + num_beq[core_num] + num_j[core_num] + num_slt[core_num] + num_lw[core_num] + num_sw[core_num] << endl;
         cout << "add: " << to_string(num_add[core_num]) << endl;
@@ -863,7 +863,7 @@ void execute()
         for (int i = 0; i < 32; i++)
         {
             string reg = reg_name[i];
-            cout << reg<<"=>"<<registers_core[core_num][registers[reg]] << "  ";
+            cout <<registers_core[core_num][registers[reg]] << " ";
         }
         cout << endl
              << endl;
