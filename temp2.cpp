@@ -580,7 +580,7 @@ void execute()
                     {
                         if (is_lw_safe(temp, core_num))
                         {
-                            SW(temp, cycles, core_num);
+                            LW(temp, cycles, core_num);
                             num_sw[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -588,7 +588,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        SW(temp, cycles, core_num);
+                        LW(temp, cycles, core_num);
                         num_sw[core_num]++;
                         PC[core_num]++;
                         to_print = true;
