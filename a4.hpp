@@ -6,9 +6,10 @@ vector<string> req_regs;
 vector<int> writeback_v(rows); 
 int put_back_end = -1, put_back_start = -1, row_access_end = -1, row_access_start = -1, column_access_start = -1, column_access_end = -1, put_back_row = -1, request_issue_cycle= -1;
 struct d_request{
-    int addr = -1, access_row = -1, access_column =-1, op = -1, data_bus = -1;
+    int addr = -1, access_row = -1, access_column =-1, op = -1, data_bus = -1,core_num =0;
     string waiting_reg;
     bool issue_msg = false;
+    
 };
 vector<d_request> request_queue;
 void erase_req(int ind);
@@ -38,11 +39,12 @@ void assign_cycle_values(int last_buffer, int last_cycle){
 
 }
 
-void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_bus_value = -1){
+void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_num , int data_bus_value = -1 ){
     string inst = I.kw;
     vector<string> vars = I.vars;
     vector<int>args = I.args;
     d_request req;
+    req.core_num= core_num;
     req.access_row = getRow(addr/4);
     req.access_column = getColumn(addr/4);
     req.addr = addr;
@@ -161,9 +163,9 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle, int data_
     
 }
 
-bool is_safe(Instruction temp){
+bool is_safe(Instruction temp, int core_num){
     for(auto req: request_queue){
-        if(req.op == 1)
+        if(req.op == 1 && req.core_num == core_num)
             for(int i = 0; i<temp.vars.size(); i++){
                 if(temp.vars[i] == req.waiting_reg){
                     return false;
@@ -174,10 +176,10 @@ bool is_safe(Instruction temp){
     
 }
 
-bool is_lw_safe(Instruction temp){
+bool is_lw_safe(Instruction temp ,int core_num){
     string reg = temp.vars[1];
     for(auto req: request_queue){
-        if(req.op==1){
+        if(req.op==1 && req.core_num==core_num){
             if(reg == req.waiting_reg){
                 return false;
             }
