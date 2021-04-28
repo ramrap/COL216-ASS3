@@ -256,38 +256,38 @@ void parse(pair<string, ll> instru, int core_num)
 }
 
 // //To execute instruction addi
-void ADDI(Instruction I)
+void ADDI(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    registers[vars[0]] = registers[vars[1]] + args[0];
+    registers_core[core_num][registers[vars[0]]] = registers_core[core_num][registers[vars[1]]] + args[0];
     changed_regs.push_back(vars[0]);
 }
 
 // //To execute instruction add
-void ADD(Instruction I)
+void ADD(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    registers[vars[0]] = registers[vars[1]] + registers[vars[2]];
+     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] +  registers_core[core_num][registers[vars[2]]];
     changed_regs.push_back(vars[0]);
 }
 
 //To execute instruction sub
-void SUB(Instruction I)
+void SUB(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    registers[vars[0]] = registers[vars[1]] - registers[vars[2]];
+     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] -  registers_core[core_num][registers[vars[2]]];
     changed_regs.push_back(vars[0]);
 }
 
 // To execute instruction mul
-void MUL(Instruction I)
+void MUL(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    registers[vars[0]] = registers[vars[1]] * registers[vars[2]];
+     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] *  registers_core[core_num][registers[vars[2]]];
     changed_regs.push_back(vars[0]);
 }
 
@@ -295,7 +295,7 @@ void MUL(Instruction I)
 void BEQ(Instruction I, int &PC, int core_num)
 {
     vector<string> vars = I.vars;
-    if (registers[vars[0]] == registers[vars[1]])
+    if ( registers_core[core_num][registers[vars[0]]] ==  registers_core[core_num][registers[vars[1]]])
     {
         PC = labels[core_num][vars[2]];
         if (PC >= inst_size[core_num])
@@ -313,7 +313,7 @@ void BEQ(Instruction I, int &PC, int core_num)
 void BNE(Instruction I, int &PC, int core_num)
 {
     vector<string> vars = I.vars;
-    if (registers[vars[0]] == registers[vars[1]])
+    if ( registers_core[core_num][registers[vars[0]]] ==  registers_core[core_num][registers[vars[1]]])
     {
         PC++;
     }
@@ -328,10 +328,10 @@ void BNE(Instruction I, int &PC, int core_num)
 }
 
 //To execute instruction slt
-void SLT(Instruction I)
+void SLT(Instruction I,int  core_num)
 {
     vector<string> vars = I.vars;
-    registers[vars[0]] = registers[vars[1]] < registers[vars[2]] ? 1 : 0;
+     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] <  registers_core[core_num][registers[vars[2]]] ? 1 : 0;
     changed_regs.push_back(vars[0]);
 }
 
@@ -354,7 +354,7 @@ void LW(Instruction I, int cycles, int core_num)
     int addr;
     string reg = vars[1];
     int offset = args[0];
-    addr = registers[reg] + offset;
+    addr =  registers_core[core_num][registers[reg]] + offset;
 
     if (addr < occupied_mem || addr >= (1 << 20))
     {
@@ -380,7 +380,7 @@ void SW(Instruction I, int cycles, int core_num)
     int addr;
     string reg = vars[1];
     int offset = args[0];
-    addr = registers[reg] + offset;
+    addr =  registers_core[core_num][registers[reg]] + offset;
 
     if (addr < occupied_mem || addr >= (1 << 20))
     {
@@ -437,7 +437,7 @@ void execute()
                     {
                         if (is_safe(temp, core_num))
                         {
-                            ADDI(temp);
+                            ADDI(temp,core_num);
                             num_addi[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -445,7 +445,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        ADDI(temp);
+                        ADDI(temp,core_num);
                         num_addi[core_num]++;
                         PC[core_num]++;
                         to_print = true;
@@ -457,7 +457,7 @@ void execute()
                     {
                         if (is_safe(temp, core_num))
                         {
-                            ADD(temp);
+                            ADD(temp,core_num);
                             num_add[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -465,7 +465,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        ADD(temp);
+                        ADD(temp,core_num);
                         num_add[core_num]++;
                         PC[core_num]++;
                         to_print = true;
@@ -477,7 +477,7 @@ void execute()
                     {
                         if (is_safe(temp, core_num))
                         {
-                            SUB(temp);
+                            SUB(temp,core_num);
                             num_sub[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -485,7 +485,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        SUB(temp);
+                        SUB(temp,core_num);
                         num_sub[core_num]++;
                         PC[core_num]++;
                         to_print = true;
@@ -497,7 +497,7 @@ void execute()
                     {
                         if (is_safe(temp, core_num))
                         {
-                            MUL(temp);
+                            MUL(temp,core_num);
                             num_mul[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -505,7 +505,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        MUL(temp);
+                        MUL(temp,core_num);
                         num_mul[core_num]++;
                         PC[core_num]++;
                         to_print = true;
@@ -553,7 +553,7 @@ void execute()
                     {
                         if (is_safe(temp, core_num))
                         {
-                            SLT(temp);
+                            SLT(temp,core_num);
                             num_slt[core_num]++;
                             PC[core_num]++;
                             to_print = true;
@@ -561,7 +561,7 @@ void execute()
                     }
                     else if (!in_buffer)
                     {
-                        SLT(temp);
+                        SLT(temp,core_num);
                         num_slt[core_num]++;
                         PC[core_num]++;
                         to_print = true;
@@ -721,7 +721,7 @@ void execute()
                 }
                 if (row_access_done)
                 {
-                    cout << "DRAM: Row " << curr_req.access_row << " activated.";
+                    cout << "DRAM: Row " << curr_req.access_row << " activated. for core :"<<core_num+1;
                     if (row_access_start < row_access_end)
                     {
                         cout << "(In cycles " << row_access_start << "-" << row_access_end << ")" << endl;
@@ -737,7 +737,7 @@ void execute()
                 }
                 if (column_access_done)
                 {
-                    cout << "DRAM: Column " << curr_req.access_column << " accessed.";
+                    cout << "DRAM: Column " << curr_req.access_column << " accessed. for core :"<<core_num+1;
                     if (column_access_start < column_access_end)
                     {
                         cout << "(In cycles " << column_access_start << "-" << column_access_end << ")" << endl;
@@ -766,7 +766,7 @@ void execute()
             //-----------------------------------------------------------------------------------------------------------------------------------------------------
             //-----------------------------------------------------------------------------------------------------------------------------------------------------
 
-            registers["$zero"] = 0;
+            registers_core[core_num][registers["$zero"]] = 0;
             if (changed_regs.size() != 0)
             {
                 sort(changed_regs.begin(), changed_regs.end());
@@ -863,7 +863,7 @@ void execute()
         for (int i = 0; i < 32; i++)
         {
             string reg = reg_name[i];
-            cout << registers_core[core_num][registers[reg]] << "  ";
+            cout << reg<<"=>"<<registers_core[core_num][registers[reg]] << "  ";
         }
         cout << endl
              << endl;
@@ -895,7 +895,7 @@ void initialise_memory()
 {
     //Intialising all registers to 0;
     int j = 0;
-    registers.insert(make_pair("$zero", j));
+    registers.insert(make_pair("$zero", j++));
     registers.insert(make_pair("$sp", j++));
     registers.insert(make_pair("$gp", j++));
     registers.insert(make_pair("$fp", j++));
@@ -994,12 +994,12 @@ int main(int argc, char *argv[])
     //         }
     //     }
     // }
-
+try{
     num_of_cores = stoi(argv[1]);
     simulation_time = stoi(argv[2]);
     for (int read = 0; read < num_of_cores; read++)
     {
-        cout << "file name to be opening :" << argv[read + 3] << endl;
+       
         ifstream file(argv[read + 3]);
         if (!file.is_open())
         {
@@ -1015,7 +1015,7 @@ int main(int argc, char *argv[])
             //code for reading from input file and converting each line into parsable strings
             while (getline(file, oline))
             {
-                // cout<<line<<endl;
+              
                 line = trimmed(oline);
                 oinst[read].push_back(line);
                 if (line.compare("") != 0)
@@ -1069,10 +1069,9 @@ int main(int argc, char *argv[])
                     }
                     else
                     {
-                        // cout<<"hello => "<<line<<" "<<num<<endl;
+                    
 
                         inst[read].push_back(pair<string, ll>(line, num));
-                        // cout<<'write complete \n';
                         line_num += 1;
                         num++;
                     }
@@ -1085,21 +1084,21 @@ int main(int argc, char *argv[])
         }
     }
 
-    cout << "helo" << endl;
+    
     row_delay = stoi(argv[num_of_cores + 3]);
     column_delay = stoi(argv[num_of_cores + 4]);
+}
+    catch (exception e)
+    {
+        cout << "Invalid Arguments" << endl;
+        return 0;
+    }
 
-    // catch (exception e)
-    // {
-    //     cout << "Invalid Arguments" << endl;
-    //     return 0;
-    // }
+    
 
     for (int num = 0; num < num_of_cores; num++)
     {
         inst_size[num] = inst[num].size();
-        cout << "Num of cores => " << num_of_cores << endl;
-
         int i = 0;
         while (i != inst_size[num])
         {
@@ -1109,15 +1108,16 @@ int main(int argc, char *argv[])
         }
     }
 
-    for (int i = 0; i < num_of_cores; i++)
-    {
-        cout << "core num : " << i << endl;
-        cout << inst[i].size() << endl;
-        for (int j = 0; j < inst[i].size(); j++)
-        {
-            cout << inst[i][j].first << " " << inst[i][j].second << endl;
-        }
-    }
+    // FOR PRINTING INSTRUCTIONS
+    // for (int i = 0; i < num_of_cores; i++)
+    // {
+    //     cout << "core num : " << i << endl;
+    //     cout << inst[i].size() << endl;
+    //     for (int j = 0; j < inst[i].size(); j++)
+    //     {
+    //         cout << inst[i][j].first << " " << inst[i][j].second << endl;
+    //     }
+    // }
 
     //If file is failed to open or file_path is wrong in argument then throw error
 
