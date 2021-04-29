@@ -34,7 +34,7 @@ int32_t *buffer_row = NULL;
 int buffered = -1;
 vector<vector<int>> used_mem;
 vector<vector<int>> changed_mem;
-vector<string> changed_regs;
+vector<vector<string>> changed_regs;
 unordered_map<string, int32_t> registers;
 vector<vector<int32_t>> registers_core(100, vector<int32_t>(32, 0));
 vector<unordered_map<string, int>> labels(100); // 'branch_mname -> line number
@@ -261,7 +261,7 @@ void ADDI(Instruction I,int core_num)
     vector<string> vars = I.vars;
     vector<int> args = I.args;
     registers_core[core_num][registers[vars[0]]] = registers_core[core_num][registers[vars[1]]] + args[0];
-    changed_regs.push_back(vars[0]);
+    changed_regs[core_num].push_back(vars[0]);
 }
 
 // //To execute instruction add
@@ -270,7 +270,7 @@ void ADD(Instruction I,int core_num)
     vector<string> vars = I.vars;
     vector<int> args = I.args;
      registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] +  registers_core[core_num][registers[vars[2]]];
-    changed_regs.push_back(vars[0]);
+    changed_regs[core_num].push_back(vars[0]);
 }
 
 //To execute instruction sub
@@ -279,7 +279,7 @@ void SUB(Instruction I,int core_num)
     vector<string> vars = I.vars;
     vector<int> args = I.args;
      registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] -  registers_core[core_num][registers[vars[2]]];
-    changed_regs.push_back(vars[0]);
+    changed_regs[core_num].push_back(vars[0]);
 }
 
 // To execute instruction mul
@@ -288,7 +288,7 @@ void MUL(Instruction I,int core_num)
     vector<string> vars = I.vars;
     vector<int> args = I.args;
      registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] *  registers_core[core_num][registers[vars[2]]];
-    changed_regs.push_back(vars[0]);
+    changed_regs[core_num].push_back(vars[0]);
 }
 
 // To execute instruction beq
@@ -332,7 +332,7 @@ void SLT(Instruction I,int  core_num)
 {
     vector<string> vars = I.vars;
      registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] <  registers_core[core_num][registers[vars[2]]] ? 1 : 0;
-    changed_regs.push_back(vars[0]);
+    changed_regs[core_num].push_back(vars[0]);
 }
 
 //To execute instruction jump
@@ -393,7 +393,7 @@ void SW(Instruction I, int cycles, int core_num)
 
     // --------------------------------------CHANGED----------------------------------------
     in_buffer = true;
-    add_req(I, addr, buffered, cycles, core_num, registers[vars[0]]);
+    add_req(I, addr, buffered, cycles, core_num, registers_core[core_num][registers[vars[0]]]);
     // --------------------------------------CHANGED----------------------------------------
 
     // cout<<row_access_end<<" "<<column_access_end<<endl;
@@ -406,10 +406,10 @@ void execute()
     ll inst_num = 0;
     int fl = 1, last = -1;
     vector<int> num_add(100, 0), num_addi(100, 0), num_j(100, 0), num_sub(100, 0), num_mul(100, 0), num_bne(100, 0), num_beq(100, 0), num_lw(100, 0), num_sw(100, 0), num_slt(100, 0);
-
+    vector<vector<string>> v(num_of_cores);
     int cycles=1;
     vector<int> PC(100, 0);
-
+    changed_regs.resize(num_of_cores);
     bool to_print = false;
 
     int curr_req_end = -1;
@@ -420,12 +420,13 @@ void execute()
     while (cycles<=simulation_time)
     {
 
-        
+        bool inst_rem = false;
         for (int core_num = 0; core_num < num_of_cores; core_num++)
-        {
-
-            if (PC[core_num] != inst_size[core_num] && cycles<=simulation_time)
+        {   
+            bool to_print_inst =false;
+            if (PC[core_num] != inst_size[core_num])
             {
+                inst_rem = true;
                 temp = instruction_list[core_num][PC[core_num]];
                 temp_pc = PC[core_num];
                 string operation = temp.kw;
@@ -436,12 +437,15 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if (is_safe(temp, core_num))
+                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
                         {
-                            ADDI(temp,core_num);
-                            num_addi[core_num]++;
-                            PC[core_num]++;
-                            to_print = true;
+                            if (is_safe(temp, core_num))
+                            {
+                                ADDI(temp,core_num);
+                                num_addi[core_num]++;
+                                PC[core_num]++;
+                                to_print_inst = true;
+                            }
                         }
                     }
                     else if (!in_buffer)
@@ -449,19 +453,22 @@ void execute()
                         ADDI(temp,core_num);
                         num_addi[core_num]++;
                         PC[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "add")
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if (is_safe(temp, core_num))
+                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
                         {
-                            ADD(temp,core_num);
-                            num_add[core_num]++;
-                            PC[core_num]++;
-                            to_print = true;
+                            if (is_safe(temp, core_num))
+                            {
+                                ADD(temp,core_num);
+                                num_add[core_num]++;
+                                PC[core_num]++;
+                                to_print_inst = true;
+                            }
                         }
                     }
                     else if (!in_buffer)
@@ -469,19 +476,22 @@ void execute()
                         ADD(temp,core_num);
                         num_add[core_num]++;
                         PC[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "sub")
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if (is_safe(temp, core_num))
+                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
                         {
-                            SUB(temp,core_num);
-                            num_sub[core_num]++;
-                            PC[core_num]++;
-                            to_print = true;
+                            if (is_safe(temp, core_num))
+                            {
+                                SUB(temp,core_num);
+                                num_sub[core_num]++;
+                                PC[core_num]++;
+                                to_print_inst = true;
+                            }
                         }
                     }
                     else if (!in_buffer)
@@ -489,19 +499,22 @@ void execute()
                         SUB(temp,core_num);
                         num_sub[core_num]++;
                         PC[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "mul")
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if (is_safe(temp, core_num))
+                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
                         {
-                            MUL(temp,core_num);
-                            num_mul[core_num]++;
-                            PC[core_num]++;
-                            to_print = true;
+                            if (is_safe(temp, core_num))
+                            {
+                                MUL(temp,core_num);
+                                num_mul[core_num]++;
+                                PC[core_num]++;
+                                to_print_inst = true;
+                            }
                         }
                     }
                     else if (!in_buffer)
@@ -509,7 +522,7 @@ void execute()
                         MUL(temp,core_num);
                         num_mul[core_num]++;
                         PC[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "beq")
@@ -520,14 +533,14 @@ void execute()
                         {
                             BEQ(temp, PC[core_num], core_num);
                             num_beq[core_num]++;
-                            to_print = true;
+                            to_print_inst = true;
                         }
                     }
                     else if (!in_buffer)
                     {
                         BEQ(temp, PC[core_num], core_num);
                         num_beq[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "bne")
@@ -537,27 +550,30 @@ void execute()
                         if (is_safe(temp, core_num))
                         {
                             BNE(temp, PC[core_num], core_num);
-                            num_beq[core_num]++;
-                            to_print = true;
+                            num_bne[core_num]++;
+                            to_print_inst = true;
                         }
                     }
                     else if (!in_buffer)
                     {
                         BNE(temp, PC[core_num], core_num);
                         num_bne[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "slt")
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if (is_safe(temp, core_num))
+                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
                         {
-                            SLT(temp,core_num);
-                            num_slt[core_num]++;
-                            PC[core_num]++;
-                            to_print = true;
+                            if (is_safe(temp, core_num))
+                            {
+                                SLT(temp,core_num);
+                                num_slt[core_num]++;
+                                PC[core_num]++;
+                                to_print_inst = true;
+                            }
                         }
                     }
                     else if (!in_buffer)
@@ -565,7 +581,7 @@ void execute()
                         SLT(temp,core_num);
                         num_slt[core_num]++;
                         PC[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "j")
@@ -581,17 +597,17 @@ void execute()
                         if (is_lw_safe(temp, core_num))
                         {
                             LW(temp, cycles, core_num);
-                            num_sw[core_num]++;
+                            num_lw[core_num]++;
                             PC[core_num]++;
-                            to_print = true;
+                            to_print_inst = true;
                         }
                     }
                     else if (!in_buffer)
                     {
                         LW(temp, cycles, core_num);
-                        num_sw[core_num]++;
+                        num_lw[core_num]++;
                         PC[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "sw")
@@ -603,7 +619,7 @@ void execute()
                             SW(temp, cycles, core_num);
                             num_sw[core_num]++;
                             PC[core_num]++;
-                            to_print = true;
+                            to_print_inst = true;
                         }
                     }
                     else if (!in_buffer)
@@ -611,12 +627,16 @@ void execute()
                         SW(temp, cycles, core_num);
                         num_sw[core_num]++;
                         PC[core_num]++;
-                        to_print = true;
+                        to_print_inst = true;
                     }
                 }
-                if (to_print)
+                if (to_print_inst)
                 {
-                    cout << "cycle " << cycles << " in Core : " << core_num + 1 << endl;
+                    if(!to_print){
+                        cout << "cycle " << cycles <<":"<< endl;
+                        to_print = true;
+                    }
+                    cout<< "In Core : " << core_num + 1 << endl;
                     last = cycles;
                     cout << "Instruction executed (PC = " << temp_pc * 4 << "): " << oinst[core_num][temp.line - 1] << endl;
                     if (temp.kw == "sw" || temp.kw == "lw")
@@ -641,10 +661,11 @@ void execute()
 
         }
 
-     //------------------------------------------------------------------------------------------------------------------------------------------------
+            //------------------------------------------------------------------------------------------------------------------------------------------------
             //---------------------------------------------------------------------C H A N G E D--------------------------------------------------------------
             if (in_buffer)
             {
+                inst_rem = true;
                 bool DRAM_request = false, put_back_done = false, row_access_done = false, column_access_done = false, print_in_buffer = false;
                 d_request curr_req = request_queue[0];
                 if (cycles == request_issue_cycle && (!curr_req.issue_msg))
@@ -678,11 +699,12 @@ void execute()
                     }
                     else
                     {
-                        registers[curr_req.waiting_reg] = memory[curr_req.access_row][curr_req.access_column];
-                        changed_regs.push_back(curr_req.waiting_reg);
+                        registers_core[curr_req.core_num][registers[curr_req.waiting_reg]] = memory[curr_req.access_row][curr_req.access_column];
+                        changed_regs[curr_req.core_num].push_back(curr_req.waiting_reg);
                     }
                     column_access_done = true;
                     print_in_buffer = true;
+                
                 }
                 if (!to_print && print_in_buffer)
                 {
@@ -769,24 +791,31 @@ void execute()
             }
             //-----------------------------------------------------------------------------------------------------------------------------------------------------
             //-----------------------------------------------------------------------------------------------------------------------------------------------------
+            bool updated_regs_msg = false;
             for(int i=0;i<num_of_cores;i++){
-            registers_core[i][registers["$zero"]] = 0;
-            }
-            if (changed_regs.size() != 0)
-            {
-                sort(changed_regs.begin(), changed_regs.end());
-                if (changed_regs[0] != "$zero")
+                registers_core[i][registers["$zero"]] = 0;
+                if (changed_regs[i].size() != 0)
                 {
-                    cout << "Updated Registers:  ";
-                    cout << changed_regs[0] << " = " << registers[changed_regs[0]];
-                    for (int i = 1; i < changed_regs.size(); i++)
+                    sort(changed_regs[i].begin(), changed_regs[i].end());
+                    if (changed_regs[i][0] != "$zero")
                     {
-                        if (changed_regs[i] != changed_regs[i - 1] && changed_regs[i] != "$zero")
-                        {
-                            cout << "    " << changed_regs[i] << " = " << registers[changed_regs[i]];
+                        if(!updated_regs_msg)
+                        {    
+                            cout << "Updated Registers: \n";
+                            updated_regs_msg = true;
                         }
+                        cout<<"\tIn core "<<i+1<<": ";
+                        cout << changed_regs[i][0] << " = " << registers_core[i][registers[changed_regs[i][0]]];
+                        for (int j = 1; j < changed_regs[i].size(); j++)
+                        {
+                            if (changed_regs[i][j] != changed_regs[i][j - 1] && changed_regs[i][j] != "$zero")
+                            {
+                                cout << "    " << changed_regs[i][j] << " = " << registers_core[i][registers[changed_regs[i][j]]];
+                            }
+                        }
+                        cout << endl;
                     }
-                    cout << endl;
+                    changed_regs[i].clear();
                 }
             }
 
@@ -805,8 +834,10 @@ void execute()
                 cout << endl;
             }
             to_print = false;
-            changed_regs.clear();
             changed_mem.clear();
+            if(!inst_rem){
+                break;
+            }
             cycles++;
         }
     

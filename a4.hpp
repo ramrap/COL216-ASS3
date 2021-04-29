@@ -13,7 +13,7 @@ struct d_request{
 };
 vector<d_request> request_queue;
 void erase_req(int ind);
-
+void print_reqs();
 void assign_cycle_values(int last_buffer, int last_cycle){
     d_request req = request_queue[0];
     request_issue_cycle = last_cycle + 1;
@@ -104,7 +104,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
             }
         }
         if(req.op == 1){
-            if(request_queue[i].op == 1 && request_queue[i].waiting_reg == req.waiting_reg){
+            if(request_queue[i].op == 1 && request_queue[i].waiting_reg == req.waiting_reg && request_queue[i].core_num == req.core_num){
                 skip_addr = request_queue[i].addr;
                 erase_req(i);
                 skip_ind = i;
@@ -195,10 +195,10 @@ void erase_req(int ind){
 
 }
 
-int reg_blocked(string reg){
+int reg_blocked(string reg, int core){
     for(auto req: request_queue){
         if(req.op==1){
-            if(reg == req.waiting_reg){
+            if(reg == req.waiting_reg && core == req.core_num){
                 return req.access_row;
             }
         }
@@ -207,11 +207,11 @@ int reg_blocked(string reg){
 }
 
 
-void reord_reg(string reg){
+void reord_reg(string reg, int core){
     int index = -1;
     int row = request_queue[0].access_row;
     for(int i =0; i<request_queue.size(); i++){
-        if(request_queue[i].op ==1 && request_queue[i].waiting_reg == reg){
+        if(request_queue[i].op ==1 && request_queue[i].waiting_reg == reg && request_queue[i].core_num == core){
             index = i;
             break;
         }
@@ -233,4 +233,12 @@ void reord_reg(string reg){
             }
         }
     }
+}
+
+void print_reqs(){
+    cout<< "addresses are:";
+    for(int i =0; i<request_queue.size(); i++){
+        cout<<" "<<request_queue[i].addr;
+    }
+    cout<<endl;
 }
