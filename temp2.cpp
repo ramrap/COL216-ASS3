@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <cstring>
 #include "helper.hpp"
 #include "a4.hpp"
 
@@ -17,7 +18,6 @@ using namespace std;
 //./main > test.out
 ll max_size = (1 << 20) / 4;
 int buffer_updates=0;
-bool in_buffer = false;
 bool no_blocking = true;
 ll occupied_mem = 0;
 ll inst_size[100];
@@ -255,6 +255,16 @@ void parse(pair<string, ll> instru, int core_num)
     return;
 }
 
+int get_addr(Instruction I, int core_num){
+    vector<string> vars = I.vars;
+    vector<int> args = I.args;
+    int addr;
+    string reg = vars[1];
+    int offset = args[0];
+    addr =  registers_core[core_num][registers[reg]] + offset;
+    return addr;
+}
+
 // //To execute instruction addi
 void ADDI(Instruction I,int core_num)
 {
@@ -351,10 +361,7 @@ void LW(Instruction I, int cycles, int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    int addr;
-    string reg = vars[1];
-    int offset = args[0];
-    addr =  registers_core[core_num][registers[reg]] + offset;
+    int addr = get_addr( I, core_num);
 
     if (addr < occupied_mem || addr >= (1 << 20))
     {
@@ -366,7 +373,6 @@ void LW(Instruction I, int cycles, int core_num)
     }
 
     // --------------------------------------CHANGED----------------------------------------
-    in_buffer = true;
     add_req(I, addr, buffered, cycles, core_num);
 
     // --------------------------------------CHANGED----------------------------------------
@@ -377,10 +383,7 @@ void SW(Instruction I, int cycles, int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    int addr;
-    string reg = vars[1];
-    int offset = args[0];
-    addr =  registers_core[core_num][registers[reg]] + offset;
+    int addr = get_addr( I, core_num);
 
     if (addr < occupied_mem || addr >= (1 << 20))
     {
@@ -391,8 +394,7 @@ void SW(Instruction I, int cycles, int core_num)
         throw runtime_error("unaligned address in sw: " + to_string(addr) + " at line " + to_string(I.line));
     }
 
-    // --------------------------------------CHANGED----------------------------------------
-    in_buffer = true;
+    // --------------------------------------CHANGED-----------------------------------------
     add_req(I, addr, buffered, cycles, core_num, registers_core[core_num][registers[vars[0]]]);
     // --------------------------------------CHANGED----------------------------------------
 
@@ -437,7 +439,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
+                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
                         {
                             if (is_safe(temp, core_num))
                             {
@@ -460,7 +462,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
+                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
                         {
                             if (is_safe(temp, core_num))
                             {
@@ -483,7 +485,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
+                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
                         {
                             if (is_safe(temp, core_num))
                             {
@@ -506,7 +508,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
+                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
                         {
                             if (is_safe(temp, core_num))
                             {
@@ -565,7 +567,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[0].op != 1 || cycles != column_access_end || request_queue[0].core_num != core_num)
+                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
                         {
                             if (is_safe(temp, core_num))
                             {
@@ -594,7 +596,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if (is_lw_safe(temp, core_num))
+                        if (is_lw_safe(temp, core_num) && assign_queue(getRow(get_addr(temp, core_num)/4)))
                         {
                             LW(temp, cycles, core_num);
                             num_lw[core_num]++;
@@ -602,7 +604,7 @@ void execute()
                             to_print_inst = true;
                         }
                     }
-                    else if (!in_buffer)
+                    else if ((!in_buffer) && assign_queue(getRow(get_addr(temp, core_num)/4)))
                     {
                         LW(temp, cycles, core_num);
                         num_lw[core_num]++;
@@ -614,7 +616,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if (is_safe(temp, core_num))
+                        if (is_safe(temp, core_num) && assign_queue(getRow(get_addr(temp, core_num)/4)))
                         {
                             SW(temp, cycles, core_num);
                             num_sw[core_num]++;
@@ -622,7 +624,7 @@ void execute()
                             to_print_inst = true;
                         }
                     }
-                    else if (!in_buffer)
+                    else if ((!in_buffer) && assign_queue(getRow(get_addr(temp, core_num)/4)))
                     {
                         SW(temp, cycles, core_num);
                         num_sw[core_num]++;
@@ -641,14 +643,14 @@ void execute()
                     cout << "Instruction executed (PC = " << temp_pc * 4 << "): " << oinst[core_num][temp.line - 1] << endl;
                     if (temp.kw == "sw" || temp.kw == "lw")
                     {
-                        if (request_queue.size() == 1)
+                        if (queue_sizes[curr_queue] == 1)
                         {
-                            cout << "DRAM request issued.(for memory address " << (request_queue[0].access_row * columns + request_queue[0].access_column) * 4 << ")" << endl;
+                            cout << "DRAM request issued.(for memory address " << (request_queue[curr_queue][first_req[curr_queue]].access_row * columns + request_queue[curr_queue][first_req[curr_queue]].access_column) * 4 << ")" << endl;
                             if (row_access_end == -1)
                             {
-                                cout << "As row " << request_queue[0].access_row << " is already present in buffer, row activation is not required." << endl;
+                                cout << "As row " << request_queue[curr_queue][first_req[curr_queue]].access_row << " is already present in buffer, row activation is not required." << endl;
                             }
-                            request_queue[0].issue_msg = true;
+                            request_queue[curr_queue][first_req[curr_queue]].issue_msg = true;
                         }
                         else
                         {
@@ -667,11 +669,11 @@ void execute()
             {
                 inst_rem = true;
                 bool DRAM_request = false, put_back_done = false, row_access_done = false, column_access_done = false, print_in_buffer = false;
-                d_request curr_req = request_queue[0];
+                d_request curr_req = request_queue[curr_queue][first_req[curr_queue]];
                 if (cycles == request_issue_cycle && (!curr_req.issue_msg))
                 {
                     DRAM_request = true;
-                    request_queue[0].issue_msg = true;
+                    curr_req.issue_msg = true;
                     print_in_buffer = true;
                 }
                 if (cycles == put_back_end)
@@ -725,9 +727,9 @@ void execute()
                     cout << "DRAM request issued.(for memory address " << (curr_req.access_row * columns + curr_req.access_column) * 4 << ")" << endl;
                     if (row_access_end == -1)
                     {
-                        cout << "As row " << request_queue[0].access_row << " is already present in buffer, row activation is not required." << endl;
+                        cout << "As row " << curr_req.access_row << " is already present in buffer, row activation is not required." << endl;
                     }
-                    request_queue[0].issue_msg = true;
+                    curr_req.issue_msg = true;
                 }
                 if (put_back_done)
                 {
@@ -776,17 +778,9 @@ void execute()
                     {
                         cout << endl;
                     }
-                    request_queue.erase(request_queue.begin());
-                    req_regs.erase(req_regs.begin());
-                    if (request_queue.size() == 0)
-                    {
-                        in_buffer = false;
-                    }
-                    // else if removed from here
-                    if (request_queue.size() != 0)
-                    {
-                        assign_cycle_values(buffered, cycles);
-                    }
+                    queue_sizes[curr_queue]-=1;
+                    first_req[curr_queue] = first_req[curr_queue] + 1 % max_queue_size;
+                    issue_next_request(buffered, cycles);
                 }
             }
             //-----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -975,6 +969,9 @@ void initialise_memory()
     {
         memory[i] = new int32_t[columns];
     }
+    memset(queue_sizes, 0, sizeof(queue_sizes));
+    memset(assigned_rows, -1, sizeof(assigned_rows));
+    memset(first_req, 0, sizeof(first_req));
 }
 
 // main function
