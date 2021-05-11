@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <cmath>
 #include "helper.hpp"
 
 #include <unordered_map>

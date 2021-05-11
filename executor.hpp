@@ -9,6 +9,7 @@ ll max_size = (1 << 20) / 4;
 int buffer_updates=0;
 bool no_blocking = true;
 ll occupied_mem = 0;
+ll memory_offset =0;
 
 ll num_of_cores;
 ll simulation_time;
@@ -24,7 +25,7 @@ int get_addr(Instruction I, int core_num){
     int addr;
     string reg = vars[1];
     int offset = args[0];
-    addr =  registers_core[core_num][registers[reg]] + offset;
+    addr =  registers_core[core_num][registers[reg]] + offset + memory_offset*core_num;
     return addr;
 }
 
@@ -124,7 +125,7 @@ void LW(Instruction I, int cycles, int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    int addr = get_addr( I, core_num);
+    int addr = get_addr( I, core_num) ;
 
     if (addr < occupied_mem || addr >= (1 << 20))
     {

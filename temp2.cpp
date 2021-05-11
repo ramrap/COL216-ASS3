@@ -78,6 +78,8 @@ void initialise_memory()
     //allocating size to memory Array
     buffer_row = new int32_t[columns];
     memory = new int32_t *[rows];
+    memory_offset = floor((rows*1.0)/num_of_cores);
+
     for (int i = 0; i < rows; i++)
     {
         memory[i] = new int32_t[columns];
@@ -110,42 +112,7 @@ int main(int argc, char *argv[])
         cout << "Invalid argument: Please provide input file path" << endl;
         return 0;
     }
-
-    // if(argc == 3){
-    //     string argv2(argv[2]);
-    //     if(argv2.compare("p1") == 0){
-    //         no_blocking = false;
-    //     }
-    //     else if(argv2.compare("p2") == 0){
-    //         no_blocking = true;
-    //     }
-    //     else{
-    //         cout<<"Invalid argument: "<<argv2<<" Please provide valid arguments."<<endl;
-    //         return 0;
-    //     }
-
-    // }
-    // if (argc >=4){
-    //     row_delay = stoi(argv[2]);
-    //     column_delay = stoi(argv[3]);
-    //     if(row_delay <0 || column_delay<0){
-    //         cout<<"Invalid argument: Row and Column access delay cannot be negative."<<endl;
-    //         return 0;
-    //     }
-    //     if (argc == 5){
-    //         string argv4(argv[4]);
-    //         if(argv4 == "p1"){
-    //             no_blocking = false;
-    //         }
-    //         else if(argv4 == "p2"){
-    //             no_blocking = true;
-    //         }
-    //         else{
-    //             cout<<"Invalid argument: "<<argv4<<" Please provide valid arguments."<<endl;
-    //             return 0;
-    //         }
-    //     }
-    // }
+  
 try{
     num_of_cores = stoi(argv[1]);
     initialise_memory();
