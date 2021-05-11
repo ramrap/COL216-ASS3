@@ -78,7 +78,7 @@ void initialise_memory()
     //allocating size to memory Array
     buffer_row = new int32_t[columns];
     memory = new int32_t *[rows];
-    memory_offset = floor((rows*1.0)/num_of_cores);
+    memory_offset = floor((rows*1.0)/num_of_cores)*1024;
 
     for (int i = 0; i < rows; i++)
     {
