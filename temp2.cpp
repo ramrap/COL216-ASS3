@@ -33,24 +33,13 @@ void initialise_memory()
     inst_size.resize(num_of_cores);
     registers_core.resize(num_of_cores, vector<int32_t>(32, 0));
     int j = 0;
-    registers.insert(make_pair("$zero", j++));
-    registers.insert(make_pair("$sp", j++));
-    registers.insert(make_pair("$gp", j++));
-    registers.insert(make_pair("$fp", j++));
-    registers.insert(make_pair("$at", j++));
-    registers.insert(make_pair("$ra", j++));
 
-    for (int i = 0; i <= 9; i++)
-    {
-        string s = "$t";
+    registers.insert(make_pair("$zero", j++));
+    registers.insert(make_pair("$at", j++));
+    for(int i=0; i < 2; i++){
+        string s = "$v";
         s += to_string(i);
         registers.insert(make_pair(s, j++));
-        if (i <= 7)
-        {
-            s = "$s";
-            s += to_string(i);
-            registers.insert(make_pair(s, j++));
-        }
     }
 
     for (int i = 0; i < 4; i++)
@@ -58,16 +47,39 @@ void initialise_memory()
         string s = "$a";
         s += to_string(i);
         registers.insert(make_pair(s, j++));
-        if (i <= 1)
-        {
-            s = "$v";
-            s += to_string(i);
-            registers.insert(make_pair(s, j++));
-            s = "$k";
-            s += to_string(i);
-            registers.insert(make_pair(s, j++));
-        }
     }
+
+    for (int i = 0; i < 8; i++)
+    {
+        string s = "$t";
+        s += to_string(i);
+        registers.insert(make_pair(s, j++));
+    }
+
+    for (int i = 0; i < 8; i++)
+    {
+        string s = "$s";
+        s += to_string(i);
+        registers.insert(make_pair(s, j++));
+    }
+    
+    for (int i = 8; i <= 9; i++)
+    {
+        string s = "$t";
+        s += to_string(i);
+        registers.insert(make_pair(s, j++));
+    }
+
+    for(int i=0; i < 2; i++){
+        string s = "$k";
+        s += to_string(i);
+        registers.insert(make_pair(s, j++));
+    }
+
+    registers.insert(make_pair("$gp", j++));
+    registers.insert(make_pair("$sp", j++));
+    registers.insert(make_pair("$fp", j++));
+    registers.insert(make_pair("$ra", j++));
 
     for (int i = 0; i < num_of_cores; i++)
     {
@@ -88,8 +100,15 @@ void initialise_memory()
     memset(assigned_rows, -1, sizeof(assigned_rows));
     memset(first_req, 0, sizeof(first_req));
     memset(assigned_queues, -1, sizeof(assigned_queues));
+    memset(blocks, 0, sizeof(blocks));
+    memset(lw_blocks, 0, sizeof(lw_blocks));
+    memset(lw_qs, 0, sizeof(lw_qs));
 
-
+    blocked_inst = new blocked_regs[num_of_cores];
+    struct blocked_regs b = {0,0,0,0, false};
+    for(int i=0;i<num_of_cores; i++)
+        blocked_inst[i] = b;
+    
     struct position pos ={false, -1, -1};
     loadReqs = new position *[num_of_cores];
     for(int i=0;i<num_of_cores;i++){
@@ -99,6 +118,15 @@ void initialise_memory()
         for(int j = 0; j < 32; j++){
             loadReqs[i][j] = pos;
         }
+    
+    total_cores = num_of_cores;
+
+    for(int i =0; i<8; i++){
+        for(int j = 0; j<max_queue_size; j++){
+            request_queue[i][j] = null_req;
+        }
+    }
+
 }
 
 // main function
