@@ -105,20 +105,24 @@ void initialise_memory()
     memset(lw_qs, 0, sizeof(lw_qs));
 
     blocked_inst = new blocked_regs[num_of_cores];
+    curr_write = new write_delay[num_of_cores];
+    write_cycles = new int[num_of_cores];
     struct blocked_regs b = {0,0,0,0, false};
-    for(int i=0;i<num_of_cores; i++)
-        blocked_inst[i] = b;
     
     struct position pos ={false, -1, -1};
     loadReqs = new position *[num_of_cores];
     for(int i=0;i<num_of_cores;i++){
         loadReqs[i] = new position[32];
     }
-    for(int i=0; i< num_of_cores; i++)
+    for(int i=0; i< num_of_cores; i++){
+        write_cycles[i] = -1;
+        blocked_inst[i] = b;
+        curr_write[i] = null_write;
         for(int j = 0; j < 32; j++){
             loadReqs[i][j] = pos;
         }
-    
+    }
+
     total_cores = num_of_cores;
 
     for(int i =0; i<8; i++){
@@ -126,6 +130,7 @@ void initialise_memory()
             request_queue[i][j] = null_req;
         }
     }
+    update_copies();
 
 }
 

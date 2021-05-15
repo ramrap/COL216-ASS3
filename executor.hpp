@@ -122,7 +122,7 @@ void JUMP(Instruction I, int &PC, int core_num)
 }
 
 //To execute instruction LW
-bool LW(Instruction I, int cycles, int core_num)
+void LW(Instruction I, int cycles, int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
@@ -141,18 +141,6 @@ bool LW(Instruction I, int cycles, int core_num)
     add_req(I, addr, buffered, cycles, core_num);
 
     // --------------------------------------CHANGED----------------------------------------
-
-    if(forwarding){
-        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num){
-            registers_core[core_num][registers[vars[0]]] = write_val;
-            changed_regs[core_num].push_back(vars[0]);
-        }
-        else{
-            forwarding = false;
-            return false;
-        }
-    }
-    return true;
 }
 
 //To execute instruction SW
@@ -186,13 +174,13 @@ void execute()
 {
     // ll PC = 0;
     ll inst_num = 0;
-    int fl = 1, last = -1;
+    int fl = 1, last = 0;
     vector<int> num_add(100, 0), num_addi(100, 0), num_j(100, 0), num_sub(100, 0), num_mul(100, 0), num_bne(100, 0), num_beq(100, 0), num_lw(100, 0), num_sw(100, 0), num_slt(100, 0);
     vector<vector<string>> v(num_of_cores);
     int cycles=1;
     vector<int> PC(100, 0);
     changed_regs.resize(num_of_cores);
-    bool to_print = false;
+    bool to_print = false, issue_write = false;
 
     int curr_req_end = -1;
     Instruction temp;
@@ -206,21 +194,21 @@ void execute()
         for (int core_num = 0; core_num < num_of_cores; core_num++)
         {   
             bool to_print_inst =false;
+            blocked_inst[core_num] = {0, 0, 0, 0, false};
             if (PC[core_num] != inst_size[core_num])
             {
                 inst_rem = true;
                 temp = instruction_list[core_num][PC[core_num]];
                 temp_pc = PC[core_num];
                 string operation = temp.kw;
-                // cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl;
-                blocked_inst[core_num] = {0, 0, 0, 0, false};
+                // cout<<"Instruction to be executed: "<<oinst[temp.line -1]<<endl
                 // Call respective operations for instructions
                 if (operation == "addi")
                 {
                     
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
+                        if(!curr_write[core_num].check)
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -247,7 +235,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
+                        if(!curr_write[core_num].check)
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -274,7 +262,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
+                        if(!curr_write[core_num].check)
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -300,7 +288,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
+                        if(!curr_write[core_num].check)
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -368,7 +356,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(request_queue[curr_queue][first_req[curr_queue]].op != 1 || cycles != column_access_end || request_queue[curr_queue][first_req[curr_queue]].core_num != core_num)
+                        if(!curr_write[core_num].check)
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -402,25 +390,21 @@ void execute()
                     {   
                         blocked_regs b = is_safe(temp, core_num);
                         int k = b.num;
-                        if (k == 0 && assign_queue(getRow(get_addr(temp, core_num)/4)))
+                        if (k == 0 && (!curr_mrm.check) && (issue_next_cycle!= cycles) && assign_queue(getRow(get_addr(temp, core_num)/4)) )
                         {
-                            bool done = LW(temp, cycles, core_num);
-                            if(done){
-                                num_lw[core_num]++;
-                                PC[core_num]++;
-                                to_print_inst = true;
-                            }
-                        } else if(k != 0)
-                            blocked_inst[core_num] = b;
-                    }
-                    else if ((!in_buffer) && assign_queue(getRow(get_addr(temp, core_num)/4)))
-                    {
-                        bool done = LW(temp, cycles, core_num);
-                        if(done){
+                            LW(temp, cycles, core_num);
                             num_lw[core_num]++;
                             PC[core_num]++;
                             to_print_inst = true;
-                        }
+                        } else if(k != 0)
+                            blocked_inst[core_num] = b;
+                    }
+                    else if ((!in_buffer)&& (!curr_mrm.check) && (issue_next_cycle!= cycles)  && assign_queue(getRow(get_addr(temp, core_num)/4)))
+                    {
+                        LW(temp, cycles, core_num);
+                        num_lw[core_num]++;
+                        PC[core_num]++;
+                        to_print_inst = true;
                     }
                 }
                 else if (operation == "sw")
@@ -429,7 +413,7 @@ void execute()
                     {
                         blocked_regs b = is_safe(temp, core_num);
                         int k = b.num;
-                        if (k == 0 && assign_queue(getRow(get_addr(temp, core_num)/4)))
+                        if (k == 0 && (!curr_mrm.check) && (issue_next_cycle!= cycles) && assign_queue(getRow(get_addr(temp, core_num)/4)))
                         {
                             SW(temp, cycles, core_num);
                             num_sw[core_num]++;
@@ -438,7 +422,7 @@ void execute()
                         } else if(k != 0)
                             blocked_inst[core_num] = b;
                     }
-                    else if ((!in_buffer) && assign_queue(getRow(get_addr(temp, core_num)/4)))
+                    else if ((!in_buffer) && (!curr_mrm.check) && (issue_next_cycle!= cycles)  && assign_queue(getRow(get_addr(temp, core_num)/4)))
                     {
                         SW(temp, cycles, core_num);
                         num_sw[core_num]++;
@@ -449,49 +433,39 @@ void execute()
                 if (to_print_inst)
                 {
                     if(!to_print){
-                        cout << "cycle " << cycles <<":"<< endl;
+                        last = print_cycle(last, cycles);
                         to_print = true;
                     }
                     cout<< "In Core : " << core_num + 1 << endl;
-                    last = cycles;
                     cout << "Instruction executed (PC = " << temp_pc * 4 << "): " << oinst[core_num][temp.line - 1] << endl;
-                    if (temp.kw == "sw" || temp.kw == "lw")
-                    {
-                        if(forwarding){
-                            cout<<"DRAM: Forwarded value("<<write_val<<") from queued store request."<<endl;
-                        }
-                        else if (total_queue_size() == 1)
-                        {
-                            cout << "DRAM request issued.(for memory address " << (request_queue[curr_queue][first_req[curr_queue]].access_row * columns + request_queue[curr_queue][first_req[curr_queue]].access_column) * 4 << ")" << endl;
-                            if (row_access_end == -1)
-                            {
-                                cout << "As row " << request_queue[curr_queue][first_req[curr_queue]].access_row << " is already present in buffer, row activation is not required." << endl;
-                            }
-                            request_queue[curr_queue][first_req[curr_queue]].issue_msg = true;
-                        }
-                        else
-                        {
-                            cout << "Request added to queue." << endl;
-                        }
-                        if(forwarding || storeRedun || loadRedun){
-                            forwarding = false;
-                            storeRedun = false;
-                            loadRedun = false;
-                            removeRedundAssigned();
-                        }
-                    }
+                    
+                    removeRedundAssigned();
+                    
                 }
             }
 
 
         }
-
             //------------------------------------------------------------------------------------------------------------------------------------------------
             //---------------------------------------------------------------------C H A N G E D--------------------------------------------------------------
-            if (in_buffer)
-            {
-                inst_rem = true;
-                bool DRAM_request = false, put_back_done = false, row_access_done = false, column_access_done = false, print_in_buffer = false;
+        if (in_buffer)
+        {
+            inst_rem = true;
+            bool DRAM_request = false, put_back_done = false, row_access_done = false, column_access_done = false, print_in_buffer = false, issue_next = false, waiting_mrm= false, waiting_write_port = false;
+            if(cycles == issue_next_cycle){
+                if(!curr_mrm.check){
+                    issue_next_request(buffered, cycles);
+                    if(in_buffer){
+                        d_request n_req = request_queue[curr_queue][first_req[curr_queue]];
+                        if(n_req.op == 1){
+                            loadReqs[n_req.core_num][n_req.waiting_reg].check = false;
+                        }
+                    }
+                }
+                else
+                    issue_next_cycle = cycles + 1;
+            }
+            else{
                 d_request curr_req = request_queue[curr_queue][first_req[curr_queue]];
                 if (cycles == request_issue_cycle && (!curr_req.issue_msg))
                 {
@@ -521,42 +495,58 @@ void execute()
                         changed_mem.push_back(temp);
                         used_mem.push_back(temp);
                         buffer_updates++;
+                        issue_next = true;
+                        
                     }
-                    else
+                    else if(!curr_write[curr_req.core_num].check)
                     {
-                        registers_core[curr_req.core_num][curr_req.waiting_reg] = memory[curr_req.access_row][curr_req.access_column];
-                        changed_regs[curr_req.core_num].push_back(reg_name[curr_req.waiting_reg]);
+                        curr_write[curr_req.core_num] = {true, curr_req.waiting_reg, memory[curr_req.access_row][curr_req.access_column]};
+                        write_cycles[curr_req.core_num] = cycles + 1;
+                        issue_next = true;
+                        issue_write = true;
+                    }
+                    else{
+                        issue_write_cycle = cycles + 1;
+                        waiting_write_port = true;
                     }
                     column_access_done = true;
                     print_in_buffer = true;
                 
                 }
-                if (!to_print && print_in_buffer)
+                if(cycles == issue_write_cycle){
+                    if(!curr_write[curr_req.core_num].check){
+                        curr_write[curr_req.core_num] = {true, curr_req.waiting_reg, memory[curr_req.access_row][curr_req.access_column]};
+                        write_cycles[curr_req.core_num] = cycles + 1;
+                        issue_next = true;
+                        issue_write = true;
+                    }
+                    else{
+                    issue_write_cycle = cycles + 1;
+                    }
+                }
+            
+                if (print_in_buffer)
                 {
-                    to_print = true;
-                    if (last == cycles - 1)
-                    {
-                        cout << "cycle " << cycles << ":" << endl;
-                        last = cycles;
-                    }
-                    else
-                    {
-                        cout << "cycle " << last + 1 << "-" << cycles << ":" << endl;
-                        last = cycles;
-                    }
+                    if(!to_print){
+                        to_print = true;
+                        last = print_cycle(last, cycles);
+                    } else
+                        cout<<endl;
+                    cout<<"DRAM Updates:\n";
+                    
                 }
                 if (DRAM_request)
                 {
-                    cout << "DRAM request issued.(for memory address " << (curr_req.access_row * columns + curr_req.access_column) * 4 << ")" << endl;
+                    cout << "\tDRAM request issued.(for memory address " << (curr_req.access_row * columns + curr_req.access_column) * 4 << ")" << endl;
                     if (row_access_end == -1)
                     {
-                        cout << "As row " << curr_req.access_row << " is already present in buffer, row activation is not required." << endl;
+                        cout << "\tAs row " << curr_req.access_row << " is already present in buffer, row activation is not required." << endl;
                     }
                     curr_req.issue_msg = true;
                 }
                 if (put_back_done)
                 {
-                    cout << "DRAM: Wroteback row " << put_back_row << ".";
+                    cout << "\tWroteback row " << put_back_row << ".";
                     if (put_back_start < put_back_end)
                     {
                         cout << "(In cycles " << put_back_start << "-" << put_back_end << ")" << endl;
@@ -572,7 +562,7 @@ void execute()
                 }
                 if (row_access_done)
                 {
-                    cout << "DRAM: Row " << curr_req.access_row ;
+                    cout << "\t Row " << curr_req.access_row<<" accessesd." ;
                     if (row_access_start < row_access_end)
                     {
                         cout << "(In cycles " << row_access_start << "-" << row_access_end << ")" << endl;
@@ -588,19 +578,23 @@ void execute()
                 }
                 if (column_access_done)
                 {
-                    cout << "DRAM: Column " << curr_req.access_column;
+                    cout << "\tColumn " << curr_req.access_column<<" accessed.";
                     if (column_access_start < column_access_end)
                     {
-                        cout << "(In cycles " << column_access_start << "-" << column_access_end << ")" << endl;
+                        cout << "(In cycles " << column_access_start << "-" << column_access_end << ")";
                     }
                     else if (column_access_end == column_access_start)
                     {
-                        cout << "(In cycle " << column_access_start << ")" << endl;
+                        cout << "(In cycle " << column_access_start << ")";
                     }
-                    else
-                    {
-                        cout << endl;
+                    if(waiting_write_port){
+                        cout <<" [Waiting for write-port to be free].";
+                    } else{
+                        cout <<" [Write-value sent to write-port of core "<<curr_req.core_num + 1<<"]";
                     }
+                    cout<<endl;
+                }
+                if(issue_next){
                     if(curr_req.op == 1){
                         lw_qs[curr_queue]--;
                         if(curr_req.has_con > 0){
@@ -616,71 +610,182 @@ void execute()
                     request_queue[curr_queue][first_req[curr_queue]] = null_req;
                     queue_sizes[curr_queue]-=1;
                     first_req[curr_queue] = first_req[curr_queue] + 1 % max_queue_size;
-                    issue_next_request(buffered, cycles);
-                    if(in_buffer){
-                        d_request n_req = request_queue[curr_queue][first_req[curr_queue]];
-                        if(n_req.op == 1){
-                            loadReqs[n_req.core_num][n_req.waiting_reg].check = false;
-                        }
-                    }
-
-                }
-            }
-            //-----------------------------------------------------------------------------------------------------------------------------------------------------
-            //-----------------------------------------------------------------------------------------------------------------------------------------------------
-            bool updated_regs_msg = false;
-            for(int i=0;i<num_of_cores;i++){
-                registers_core[i][registers["$zero"]] = 0;
-                if (changed_regs[i].size() != 0)
-                {
-                    sort(changed_regs[i].begin(), changed_regs[i].end());
-                    if (changed_regs[i][0] != "$zero")
-                    {
-                        if(!updated_regs_msg)
-                        {    
-                            cout << "Updated Registers: \n";
-                            updated_regs_msg = true;
-                        }
-                        cout<<"\tIn core "<<i+1<<": ";
-                        cout << changed_regs[i][0] << " = " << registers_core[i][registers[changed_regs[i][0]]];
-                        for (int j = 1; j < changed_regs[i].size(); j++)
-                        {
-                            if (changed_regs[i][j] != changed_regs[i][j - 1] && changed_regs[i][j] != "$zero")
-                            {
-                                cout << "    " << changed_regs[i][j] << " = " << registers_core[i][registers[changed_regs[i][j]]];
+                    if(!curr_mrm.check){
+                        issue_next_request(buffered, cycles);
+                        if(in_buffer){
+                            d_request n_req = request_queue[curr_queue][first_req[curr_queue]];
+                            if(n_req.op == 1){
+                                loadReqs[n_req.core_num][n_req.waiting_reg].check = false;
                             }
                         }
-                        cout << endl;
                     }
-                    changed_regs[i].clear();
+                    else{
+                        issue_next_cycle = cycles + 1;
+                    }
+
                 }
             }
-
-            if (changed_mem.size() != 0)
-            {
-                if (changed_mem.size() != 1)
-                {
-                    cout << "error" << endl;
-                }
-                sort(changed_mem.begin(), changed_mem.end());
-                cout << "Memory Address:  ";
-                cout << (changed_mem[0][0] * columns + changed_mem[0][1]) * 4 << "-" << (changed_mem[0][0] * columns + changed_mem[0][1]) * 4 + 3 << " = " << memory[changed_mem[0][0]][changed_mem[0][1]] << endl;
-            }
-
-            
-            if (to_print)
-            {
-                cout<<endl<<"REQUEST QUEUES: \n";
-                print_reqs();
-                cout << endl;
-            }
-            to_print = false;
-            changed_mem.clear();
-            if(!inst_rem){
-                break;
-            }
-            cycles++;
         }
+
+        if(frwd_issue_write_cycle == cycles){
+            if(!curr_write[curr_mrm.core].check){
+                curr_write[curr_mrm.core] = {true, curr_mrm.reg, curr_mrm.val};
+                write_cycles[curr_mrm.core] = cycles + 1;
+                issue_write = true;
+                curr_mrm = null_mrm;
+                update_copies();
+            } else{
+                frwd_issue_write_cycle = cycles + 1;
+            }
+        }
+        if(curr_mrm.check && cycles == mrm_delay_start - 1){
+            if(!to_print){
+                last = print_cycle(last, cycles);
+                to_print = true;
+            } else
+                cout<<endl;
+            
+            cout<<"MRM Updates:\n";
+            if(curr_mrm.add_req){
+                cout<<"\tDRAM-request sent to MRM (for address "<<curr_mrm.addr<<")"<<endl;
+            } else{
+                cout<<"\tRequest for issuing next DRAM-request initiated."<<endl;
+            }
+        }
+
+        if(curr_mrm.check && cycles == mrm_delay_end){
+            if(!to_print){
+                last = print_cycle(last, cycles);
+                to_print = true;
+            } else
+                cout<<endl;
+            cout<<"MRM Updates:\n";
+            bool up = true; 
+            if(curr_mrm.add_req){
+                if(!curr_mrm.forwarding){
+                    cout<<"\tDRAM-request added to request-queue (for address "<<curr_mrm.addr<<")";
+                    if(curr_mrm.sw_redun){
+                        cout<<" [SW-SW redundancy]"<<endl;
+                    } else if(curr_mrm.lw_redun){
+                        cout<<" [In cycles "<<cycles-1<<"-"<<cycles<<"] "<<"[LW-LW redundancy]"<<endl;
+                    } else{
+                        cout<<endl;
+                    }
+                } else{
+                    cout<<"\tForwarded value("<<curr_mrm.val<<") from a store-request to write data bus.";
+                    if(!curr_write[curr_mrm.core].check){
+                        cout <<" [Write-value sent to write-port of core "<<curr_mrm.core + 1<<"]";
+                        curr_write[curr_mrm.core] = {true, curr_mrm.reg, curr_mrm.val};
+                        write_cycles[curr_mrm.core] = cycles + 1;
+                        issue_write = true;
+                    } else{
+                        cout <<" [Waiting for write-port to be free].";
+                        frwd_issue_write_cycle = cycles + 1;
+                        up = false;
+                    }
+                }
+            } else{
+                if(curr_mrm.row_switch){
+                    cout<<"\tSwitched to request queue "<<assigned_rows[getRow(curr_mrm.addr/4)]<<".\n";
+                }
+                cout<<"\tFetched next DRAM-request [for address: "<<curr_mrm.addr<<"]\n";
+            }
+            if(up){
+                curr_mrm = null_mrm;
+                update_copies();
+            }
+        }
+        bool print_port = false;
+        if(issue_write){
+            if(!to_print){
+                last = print_cycle(last, cycles);
+                to_print = true;
+            } else
+                cout<<endl;
+            
+            cout<<"Write-port Updates:\n";
+            print_port = true;
+            for(int i =0; i< num_of_cores; i++){
+                if(curr_write[i].check && write_cycles[i]-1 == cycles)
+                    cout<<"\tIn core "<<i + 1<<": Write request issued for register "<<reg_name[curr_write[i].reg]<<"."<<endl;
+                
+            }
+        }
+        
+        issue_write = false;
+
+
+        for(int i =0; i< num_of_cores; i++){
+            if(curr_write[i].check && write_cycles[i] == cycles){
+                if(!to_print){
+                    last = print_cycle(last, cycles);
+                    to_print = true;
+                }
+                if(!print_port){
+                    cout<<"\nWrite-port Updates:\n";
+                    print_port = true;
+                }
+                cout<<"\tIn core "<<i+1<<": Write request for register "<<reg_name[curr_write[i].reg]<<" completed."<<endl;
+                registers_core[i][curr_write[i].reg] = curr_write[i].val;
+                changed_regs[i].push_back(reg_name[curr_write[i].reg]);
+                curr_write[i] = null_write;
+            }
+        }
+        //-----------------------------------------------------------------------------------------------------------------------------------------------------
+        //-----------------------------------------------------------------------------------------------------------------------------------------------------
+        bool updated_regs_msg = false;
+        for(int i=0;i<num_of_cores;i++){
+            registers_core[i][registers["$zero"]] = 0;
+            if (changed_regs[i].size() != 0)
+            {
+                sort(changed_regs[i].begin(), changed_regs[i].end());
+                if (changed_regs[i][0] != "$zero")
+                {
+                    if(!updated_regs_msg)
+                    {    
+                        cout << "\nUpdated Registers: \n";
+                        updated_regs_msg = true;
+                    }
+                    cout<<"\tIn core "<<i+1<<": ";
+                    cout << changed_regs[i][0] << " = " << registers_core[i][registers[changed_regs[i][0]]];
+                    for (int j = 1; j < changed_regs[i].size(); j++)
+                    {
+                        if (changed_regs[i][j] != changed_regs[i][j - 1] && changed_regs[i][j] != "$zero")
+                        {
+                            cout << "    " << changed_regs[i][j] << " = " << registers_core[i][registers[changed_regs[i][j]]];
+                        }
+                    }
+                    cout << endl;
+                }
+                changed_regs[i].clear();
+            }
+        }
+
+        if (changed_mem.size() != 0)
+        {
+            if (changed_mem.size() != 1)
+            {
+                cout << "error" << endl;
+            }
+            sort(changed_mem.begin(), changed_mem.end());
+            cout << "Memory Address:  ";
+            cout << (changed_mem[0][0] * columns + changed_mem[0][1]) * 4 << "-" << (changed_mem[0][0] * columns + changed_mem[0][1]) * 4 + 3 << " = " << memory[changed_mem[0][0]][changed_mem[0][1]] << endl;
+        }
+
+        
+        if (to_print)
+        {
+            cout<<endl<<"REQUEST QUEUES: \n";
+            print_reqs();
+            cout << endl;
+        }
+        to_print = false;
+        changed_mem.clear();
+        if(!inst_rem){
+            break;
+        }
+        cycles++;
+    }
     
        
     

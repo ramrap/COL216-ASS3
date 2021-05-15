@@ -61,6 +61,20 @@ string llToHex(long long num){
     return(sstream.str());
 }
 
+int print_cycle(int last, int cycles){
+    if (last == cycles - 1)
+    {
+        cout << "cycle " << cycles << ":" << endl;
+        last = cycles;
+    }
+    else
+    {
+        cout << "cycle " << last + 1 << "-" << cycles << ":" << endl;
+        last = cycles;
+    }
+    return last;
+}
+
 bool compare_address(vector<int> v1, vector<int> v2){
     if(v1[0] == v2[0]){
         return v1[1] < v2[1];
