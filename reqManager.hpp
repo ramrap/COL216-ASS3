@@ -443,9 +443,11 @@ blocked_regs is_safe(Instruction temp, int core_num){
     
 }
 
-void update_copies(){
+void update_copies(int k = 1){
     for(int i=0; i<8; i++){
-        copy_first_req[i] = first_req[i];
+        if(k == 1){
+            copy_first_req[i] = first_req[i]; 
+        }
         copy_assigned_queues[i] = assigned_queues[i];
         for(int j =0; j<max_queue_size; j++){
             copy_req_queue[i][j] = request_queue[i][j];
@@ -520,4 +522,16 @@ int total_queue_size(){
         sum+=queue_sizes[i];
     }
     return sum;
+}
+
+int requests_from_core(int c){
+    int count =0;
+    for(int i = 0; i<8; i++){
+        for(int j =0; j<max_queue_size; j++){
+            if(!request_queue[i][j].is_null && request_queue[i][j].core_num == c){
+                count++;
+            }
+        }
+    }
+    return count;
 }

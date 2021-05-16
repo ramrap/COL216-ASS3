@@ -19,6 +19,7 @@ vector<vector<int>> changed_mem;
 vector<vector<string>> changed_regs;
 vector<vector<int32_t>> registers_core;
 
+
 int get_addr(Instruction I, int core_num){
     vector<string> vars = I.vars;
     vector<int> args = I.args;
@@ -175,10 +176,12 @@ void execute()
     // ll PC = 0;
     ll inst_num = 0;
     int fl = 1, last = 0;
-    vector<int> num_add(100, 0), num_addi(100, 0), num_j(100, 0), num_sub(100, 0), num_mul(100, 0), num_bne(100, 0), num_beq(100, 0), num_lw(100, 0), num_sw(100, 0), num_slt(100, 0);
+    vector<int> num_add(num_of_cores, 0), num_addi(num_of_cores, 0), num_j(num_of_cores, 0), num_sub(num_of_cores, 0), num_mul(num_of_cores, 0), num_bne(num_of_cores, 0), num_beq(num_of_cores, 0), num_lw(num_of_cores, 0), num_sw(num_of_cores, 0), num_slt(num_of_cores, 0);
     vector<vector<string>> v(num_of_cores);
     int cycles=1;
-    vector<int> PC(100, 0);
+    vector<int> PC(num_of_cores, 0);
+    vector<bool> done(num_of_cores, false);
+    bool DONE;
     changed_regs.resize(num_of_cores);
     bool to_print = false, issue_write = false;
 
@@ -443,6 +446,22 @@ void execute()
                     
                 }
             }
+            else{
+                done[core_num] = true;
+                if(requests_from_core(core_num) == 0){
+                    if(!to_print){
+                        to_print = true;
+                        last = print_cycle(last, cycles);
+                    }
+                    cout << "In core " << core_num + 1 << ": Program Executed Successfully!\n";
+                }
+                DONE = true;
+                for(int i=0;i<num_of_cores; i++){
+                    if(!done[i]){
+                        DONE = false;
+                    }
+                }
+            }
 
 
         }
@@ -609,6 +628,7 @@ void execute()
                     cont_reqs++;
                     request_queue[curr_queue][first_req[curr_queue]] = null_req;
                     queue_sizes[curr_queue]-=1;
+                    update_copies();
                     first_req[curr_queue] = first_req[curr_queue] + 1 % max_queue_size;
                     if(!curr_mrm.check){
                         issue_next_request(buffered, cycles);
@@ -671,6 +691,7 @@ void execute()
                     } else{
                         cout<<endl;
                     }
+                    update_copies(0);
                 } else{
                     cout<<"\tForwarded value("<<curr_mrm.val<<") from a store-request to write data bus.";
                     if(!curr_write[curr_mrm.core].check){
@@ -678,6 +699,7 @@ void execute()
                         curr_write[curr_mrm.core] = {true, curr_mrm.reg, curr_mrm.val};
                         write_cycles[curr_mrm.core] = cycles + 1;
                         issue_write = true;
+                        update_copies(0);
                     } else{
                         cout <<" [Waiting for write-port to be free].";
                         frwd_issue_write_cycle = cycles + 1;
@@ -689,10 +711,10 @@ void execute()
                     cout<<"\tSwitched to request queue "<<assigned_rows[getRow(curr_mrm.addr/4)]<<".\n";
                 }
                 cout<<"\tFetched next DRAM-request [for address: "<<curr_mrm.addr<<"]\n";
+                update_copies();
             }
             if(up){
                 curr_mrm = null_mrm;
-                update_copies();
             }
         }
         bool print_port = false;
@@ -717,12 +739,17 @@ void execute()
 
         for(int i =0; i< num_of_cores; i++){
             if(curr_write[i].check && write_cycles[i] == cycles){
+                bool yo = false;
                 if(!to_print){
                     last = print_cycle(last, cycles);
                     to_print = true;
+                    yo = true;
                 }
                 if(!print_port){
-                    cout<<"\nWrite-port Updates:\n";
+                    if(!yo){
+                        cout<<endl;
+                    }
+                    cout<<"Write-port Updates:\n";
                     print_port = true;
                 }
                 cout<<"\tIn core "<<i+1<<": Write request for register "<<reg_name[curr_write[i].reg]<<" completed."<<endl;
@@ -789,9 +816,11 @@ void execute()
     
        
     
-    
+
+    removeRedundAssigned();
+    update_copies();
     // Increasing PC until we reach last line
-     if (buffered != -1)
+     if (buffered != -1 && total_queue_size() == 0 && DONE && cycles - 1 + row_delay <= simulation_time)
         {
             if (row_delay == 0)
             {
@@ -810,16 +839,20 @@ void execute()
             }
             cycles = cycles + row_delay;
             cout << endl;
+            removeRedundAssigned();
+            update_copies();
+            print_reqs();
         }
+    
+
 
 
     for (int core_num = 0; core_num < num_of_cores; core_num++)
     {
 
-       
-        cout << endl
-             << "Program Executed Successfully for Core Number : " << core_num + 1 << ".\n\n";
-        cout << "*****Statistics***** \n";
+           cout << endl;
+        
+        cout << "*****Core " << core_num + 1 << " Statistics***** \n";
         // cout << "Total no. of clock cycles: " << cycles - 1 << endl;
         cout << "Total number of buffer updates: " << buffer_updates << endl;
         cout << "Number of times instruction were executed: \n";
