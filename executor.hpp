@@ -36,8 +36,7 @@ void ADDI(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-    registers_core[core_num][registers[vars[0]]] = registers_core[core_num][registers[vars[1]]] + args[0];
-    changed_regs[core_num].push_back(vars[0]);
+    curr_write[core_num] = {true, registers[vars[0]], registers_core[core_num][registers[vars[1]]] + args[0]};
 }
 
 // //To execute instruction add
@@ -45,8 +44,7 @@ void ADD(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] +  registers_core[core_num][registers[vars[2]]];
-    changed_regs[core_num].push_back(vars[0]);
+    curr_write[core_num] = {true, registers[vars[0]], registers_core[core_num][registers[vars[1]]] +  registers_core[core_num][registers[vars[2]]]};
 }
 
 //To execute instruction sub
@@ -54,8 +52,7 @@ void SUB(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] -  registers_core[core_num][registers[vars[2]]];
-    changed_regs[core_num].push_back(vars[0]);
+    curr_write[core_num] = {true, registers[vars[0]], registers_core[core_num][registers[vars[1]]] -  registers_core[core_num][registers[vars[2]]]};
 }
 
 // To execute instruction mul
@@ -63,8 +60,7 @@ void MUL(Instruction I,int core_num)
 {
     vector<string> vars = I.vars;
     vector<int> args = I.args;
-     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] *  registers_core[core_num][registers[vars[2]]];
-    changed_regs[core_num].push_back(vars[0]);
+    curr_write[core_num] = {true, registers[vars[0]], registers_core[core_num][registers[vars[1]]] *  registers_core[core_num][registers[vars[2]]]};
 }
 
 // To execute instruction beq
@@ -107,8 +103,7 @@ void BNE(Instruction I, int &PC, int core_num)
 void SLT(Instruction I,int  core_num)
 {
     vector<string> vars = I.vars;
-     registers_core[core_num][registers[vars[0]]] =  registers_core[core_num][registers[vars[1]]] <  registers_core[core_num][registers[vars[2]]] ? 1 : 0;
-    changed_regs[core_num].push_back(vars[0]);
+    curr_write[core_num] = {true, registers[vars[0]], registers_core[core_num][registers[vars[1]]] <  registers_core[core_num][registers[vars[2]]] ? 1 : 0};
 }
 
 //To execute instruction jump
@@ -190,10 +185,23 @@ void execute()
     int curr_req_end = -1;
     Instruction temp;
     int temp_pc;
-
+    bool busy_write;
+    int busy_core1;
+    int busy_core2;
     int flag = 1;
     while (cycles<=simulation_time)
     {
+        busy_write = false;
+        busy_core1 = -1;
+        busy_core2 = -1;
+        if(in_buffer && cycles == column_access_end && request_queue[curr_queue][first_req[curr_queue]].op == 1){
+            busy_core1 = request_queue[curr_queue][first_req[curr_queue]].core_num;
+            busy_write = true;
+        }
+        if((curr_mrm.check && curr_mrm.forwarding && mrm_delay_end == cycles) || cycles == frwd_issue_write_cycle){
+            busy_core2 = curr_mrm.core;
+            busy_write = true;
+        }
 
         bool inst_rem = false;
         for (int core_num = 0; core_num < num_of_cores; core_num++)
@@ -213,7 +221,7 @@ void execute()
                     
                     if (in_buffer && no_blocking)
                     {
-                        if(!curr_write[core_num].check)
+                        if(!busy_write || (!busy_core1 == core_num && !busy_core2 == core_num))
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -223,6 +231,8 @@ void execute()
                                 num_addi[core_num]++;
                                 PC[core_num]++;
                                 to_print_inst = true;
+                                write_cycles[core_num] = cycles;
+                                issue_write = true;
                             } else
                                 blocked_inst[core_num] = b;
                         }
@@ -233,6 +243,8 @@ void execute()
                         num_addi[core_num]++;
                         PC[core_num]++;
                         to_print_inst = true;
+                        write_cycles[core_num] = cycles;
+                        issue_write = true;
                         
                     }
                 }
@@ -240,7 +252,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(!curr_write[core_num].check)
+                        if(!busy_write || (!busy_core1 == core_num && !busy_core2 == core_num))
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -250,6 +262,8 @@ void execute()
                                 num_add[core_num]++;
                                 PC[core_num]++;
                                 to_print_inst = true;
+                                write_cycles[core_num] = cycles;
+                                issue_write = true;
                             } else
                                 blocked_inst[core_num] = b;
                         }
@@ -260,6 +274,8 @@ void execute()
                         num_add[core_num]++;
                         PC[core_num]++;
                         to_print_inst = true;
+                        write_cycles[core_num] = cycles;
+                        issue_write = true;
 
                     }
                 }
@@ -267,7 +283,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(!curr_write[core_num].check)
+                        if(!busy_write || (!busy_core1 == core_num && !busy_core2 == core_num))
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -277,6 +293,8 @@ void execute()
                                 num_sub[core_num]++;
                                 PC[core_num]++;
                                 to_print_inst = true;
+                                write_cycles[core_num] = cycles;
+                                issue_write = true;
                             } else
                                 blocked_inst[core_num] = b;
                         }
@@ -287,13 +305,15 @@ void execute()
                         num_sub[core_num]++;
                         PC[core_num]++;
                         to_print_inst = true;
+                        write_cycles[core_num] = cycles;
+                        issue_write = true;
                     }
                 }
                 else if (operation == "mul")
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(!curr_write[core_num].check)
+                        if(!busy_write || (!busy_core1 == core_num && !busy_core2 == core_num))
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -303,6 +323,8 @@ void execute()
                                 num_mul[core_num]++;
                                 PC[core_num]++;
                                 to_print_inst = true;
+                                write_cycles[core_num] = cycles;
+                                issue_write = true;
                             } else
                                 blocked_inst[core_num] = b;
                         }
@@ -313,6 +335,8 @@ void execute()
                         num_mul[core_num]++;
                         PC[core_num]++;
                         to_print_inst = true;
+                        write_cycles[core_num] = cycles;
+                        issue_write = true;
                     }
                 }
                 else if (operation == "beq")
@@ -361,7 +385,7 @@ void execute()
                 {
                     if (in_buffer && no_blocking)
                     {
-                        if(!curr_write[core_num].check)
+                        if(!busy_write || (!busy_core1 == core_num && !busy_core2 == core_num))
                         {
                             blocked_regs b = is_safe(temp, core_num);
                             int k = b.num;
@@ -371,6 +395,8 @@ void execute()
                                 num_slt[core_num]++;
                                 PC[core_num]++;
                                 to_print_inst = true;
+                                write_cycles[core_num] = cycles;
+                                issue_write = true;
                             } else
                                 blocked_inst[core_num] = b;
                         }
@@ -381,6 +407,8 @@ void execute()
                         num_slt[core_num]++;
                         PC[core_num]++;
                         to_print_inst = true;
+                        write_cycles[core_num] = cycles;
+                        issue_write = true;
                     }
                 }
                 else if (operation == "j")
@@ -542,28 +570,17 @@ void execute()
                     else if(!curr_write[curr_req.core_num].check)
                     {
                         curr_write[curr_req.core_num] = {true, curr_req.waiting_reg, memory[curr_req.access_row][curr_req.access_column]};
-                        write_cycles[curr_req.core_num] = cycles + 1;
-                        issue_next = true;
+                        write_cycles[curr_req.core_num] = cycles;
                         issue_write = true;
+                        issue_next = true;
                     }
                     else{
-                        issue_write_cycle = cycles + 1;
-                        waiting_write_port = true;
+                        cout<<"ERRROORRRRR"<<endl;
+                        return;
                     }
                     column_access_done = true;
                     print_in_buffer = true;
                 
-                }
-                if(cycles == issue_write_cycle){
-                    if(!curr_write[curr_req.core_num].check){
-                        curr_write[curr_req.core_num] = {true, curr_req.waiting_reg, memory[curr_req.access_row][curr_req.access_column]};
-                        write_cycles[curr_req.core_num] = cycles + 1;
-                        issue_next = true;
-                        issue_write = true;
-                    }
-                    else{
-                    issue_write_cycle = cycles + 1;
-                    }
                 }
             
                 if (print_in_buffer)
@@ -673,7 +690,7 @@ void execute()
         if(frwd_issue_write_cycle == cycles){
             if(!curr_write[curr_mrm.core].check){
                 curr_write[curr_mrm.core] = {true, curr_mrm.reg, curr_mrm.val};
-                write_cycles[curr_mrm.core] = cycles + 1;
+                write_cycles[curr_mrm.core] = cycles;
                 issue_write = true;
                 curr_mrm = null_mrm;
                 update_copies();
@@ -744,7 +761,6 @@ void execute()
             }
         }
 
-        bool print_port = false;
         if(issue_write){
             if(!to_print){
                 last = print_cycle(last, cycles);
@@ -753,38 +769,19 @@ void execute()
                 cout<<endl;
             
             cout<<"Write-port Updates:\n";
-            print_port = true;
             for(int i =0; i< num_of_cores; i++){
-                if(curr_write[i].check && write_cycles[i]-1 == cycles)
-                    cout<<"\tIn core "<<i + 1<<": Write request issued for register "<<reg_name[curr_write[i].reg]<<"."<<endl;
+                if(curr_write[i].check && write_cycles[i] == cycles){
+                    cout<<"\tIn core "<<i + 1<<": Write request issued for register "<<reg_name[curr_write[i].reg]<<". [Register will be updated on clock-edge]"<<endl;
+                    registers_core[i][curr_write[i].reg] = curr_write[i].val;
+                    changed_regs[i].push_back(reg_name[curr_write[i].reg]);
+                    curr_write[i] = null_write;
+                }
                 
             }
         }
         
         issue_write = false;
 
-
-        for(int i =0; i< num_of_cores; i++){
-            if(curr_write[i].check && write_cycles[i] == cycles){
-                bool yo = false;
-                if(!to_print){
-                    last = print_cycle(last, cycles);
-                    to_print = true;
-                    yo = true;
-                }
-                if(!print_port){
-                    if(!yo){
-                        cout<<endl;
-                    }
-                    cout<<"Write-port Updates:\n";
-                    print_port = true;
-                }
-                cout<<"\tIn core "<<i+1<<": Write request for register "<<reg_name[curr_write[i].reg]<<" completed."<<endl;
-                registers_core[i][curr_write[i].reg] = curr_write[i].val;
-                changed_regs[i].push_back(reg_name[curr_write[i].reg]);
-                curr_write[i] = null_write;
-            }
-        }
         //-----------------------------------------------------------------------------------------------------------------------------------------------------
         //-----------------------------------------------------------------------------------------------------------------------------------------------------
         bool updated_regs_msg = false;
@@ -797,7 +794,7 @@ void execute()
                 {
                     if(!updated_regs_msg)
                     {    
-                        cout << "\nUpdated Registers: \n";
+                        cout << "\nUpdated Registers [After this cycle(on the clock-edge)]: \n";
                         updated_regs_msg = true;
                     }
                     cout<<"\tIn core "<<i+1<<": ";
