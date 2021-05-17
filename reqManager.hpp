@@ -26,9 +26,10 @@ struct mrm_delay{
     bool issue_req, row_switch;
     bool add_req, lw_redun, sw_redun, forwarding;
     int addr, val, reg, core;
+    bool first_req;
 };
 
-struct mrm_delay null_mrm = {false, false, false, false, false, false, false, 0, 0, 0, 0};
+struct mrm_delay null_mrm = {false, false, false, false, false, false, false, 0, 0, 0, 0, false};
 struct write_delay null_write = {false, 0, 0};
 struct mrm_delay curr_mrm = null_mrm;
 write_delay *curr_write;
@@ -155,7 +156,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
         if(req.op == 1){
             lw_qs[curr_queue]++;
         }
-        curr_mrm ={true, false, false, true, false, false, false, req.addr, -1, req.waiting_reg, req.core_num};
+        curr_mrm ={true, false, false, true, false, false, false, req.addr, -1, req.waiting_reg, req.core_num, true};
         mrm_delay_start = last_cycle + 1;
         mrm_delay_end = last_cycle + 1;
         assign_cycle_values(last_buffer, last_cycle + 1);
@@ -175,7 +176,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
         if(req.addr == j_req.addr){
             if(j_req.op == 0){
                 if(req.op == 1){
-                    curr_mrm ={true, false, false, true, false, false, true, req.addr, j_req.data_bus, req.waiting_reg, req.core_num};
+                    curr_mrm ={true, false, false, true, false, false, true, req.addr, j_req.data_bus, req.waiting_reg, req.core_num, false};
                     mrm_delay_start = last_cycle + 1;
                     mrm_delay_end = last_cycle + 1;
                     return;
@@ -184,7 +185,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
                     request_queue[q][(j+ first_req[q]) % max_queue_size].core_num = req.core_num;
                     request_queue[q][(j+ first_req[q]) % max_queue_size].data_bus = req.data_bus;
                     request_queue[q][(j+ first_req[q]) % max_queue_size].waiting_reg = req.waiting_reg;
-                    curr_mrm ={true, false, false, true, false, true, false, req.addr, -1, req.waiting_reg, req.core_num};
+                    curr_mrm ={true, false, false, true, false, true, false, req.addr, -1, req.waiting_reg, req.core_num, false};
                     mrm_delay_start = last_cycle + 1;
                     mrm_delay_end = last_cycle + 1;
                     return;
@@ -216,7 +217,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
             }
             request_queue[pos.queue][pos.ind] = null_req;
             lw_qs[pos.queue]--;
-            curr_mrm ={true, false, false, true, true, false, false, req.addr, -1, req.waiting_reg, req.core_num};
+            curr_mrm ={true, false, false, true, true, false, false, req.addr, -1, req.waiting_reg, req.core_num, false};
             mrm_delay_start = last_cycle + 1;
             mrm_delay_end = last_cycle + 2;
         }
@@ -234,7 +235,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
         }
     }
     if(!curr_mrm.check){
-        curr_mrm ={true, false, false, true, false, false, false, req.addr, -1, req.waiting_reg, req.core_num};
+        curr_mrm ={true, false, false, true, false, false, false, req.addr, -1, req.waiting_reg, req.core_num, false};
         mrm_delay_start = last_cycle + 1;
         mrm_delay_end = last_cycle + 1;
     }
@@ -317,7 +318,7 @@ void switchQueue(int buffer, int cycle){
     
 
     if(q_num == -1){
-        curr_mrm = {true, true, false, false, false, false, false, -1, -1, -1, -1};
+        curr_mrm = {true, true, false, false, false, false, false, -1, -1, -1, -1, false};
         mrm_delay_start = cycle + 1;
         mrm_delay_end = cycle + 2;
         issue_next_request(buffer, cycle + 1);
@@ -326,7 +327,7 @@ void switchQueue(int buffer, int cycle){
         curr_queue = q_num;
         if(ind != -1)
             first_req[curr_queue] = ind;
-        curr_mrm = {true, true, true, false, false, false, false, -1, -1, -1, -1};
+        curr_mrm = {true, true, true, false, false, false, false, -1, -1, -1, -1, false};
         mrm_delay_start = cycle + 1;
         mrm_delay_end = cycle + 2;
         issue_next_request(buffer,cycle + 1);

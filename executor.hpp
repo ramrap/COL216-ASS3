@@ -440,9 +440,10 @@ void execute()
                     if(!to_print){
                         last = print_cycle(last, cycles);
                         to_print = true;
+                        cout<<"Instruction Execution:"<<endl;
                     }
-                    cout<< "In Core : " << core_num + 1 << endl;
-                    cout << "Instruction executed (PC = " << temp_pc * 4 << "): " << oinst[core_num][temp.line - 1] << endl;
+                    cout<< "\tIn core " << core_num + 1 <<" (PC = " << temp_pc * 4 << "): ";
+                    cout << oinst[core_num][temp.line - 1] << endl;
                     
                     removeRedundAssigned();
                     
@@ -475,8 +476,26 @@ void execute()
         {
             inst_rem = true;
             bool DRAM_request = false, put_back_done = false, row_access_done = false, column_access_done = false, print_in_buffer = false, issue_next = false, waiting_mrm= false, waiting_write_port = false;
+            d_request curr_req = request_queue[curr_queue][first_req[curr_queue]];
             if(cycles == issue_next_cycle){
                 if(!curr_mrm.check){
+                    if(curr_req.op == 1){
+                        lw_qs[curr_queue]--;
+                        if(curr_req.has_con > 0){
+                            for(int i =0; i<max_queue_size; i++){
+                                if(curr_req.lw_sw_con[i] == 1){
+                                    request_queue[curr_queue][i].lw_sw_con[first_req[curr_queue]] = 0;
+                                    request_queue[curr_queue][i].has_con--;
+                                }
+                            }
+                        }
+                    }
+                    cont_reqs++;
+                    request_queue[curr_queue][first_req[curr_queue]] = null_req;
+                    queue_sizes[curr_queue]-=1;
+                    update_copies();
+                    first_req[curr_queue] = first_req[curr_queue] + 1 % max_queue_size;
+                
                     issue_next_request(buffered, cycles);
                     if(in_buffer){
                         d_request n_req = request_queue[curr_queue][first_req[curr_queue]];
@@ -489,7 +508,6 @@ void execute()
                     issue_next_cycle = cycles + 1;
             }
             else{
-                d_request curr_req = request_queue[curr_queue][first_req[curr_queue]];
                 if (cycles == request_issue_cycle && (!curr_req.issue_msg))
                 {
                     DRAM_request = true;
@@ -618,23 +636,24 @@ void execute()
                     cout<<endl;
                 }
                 if(issue_next){
-                    if(curr_req.op == 1){
-                        lw_qs[curr_queue]--;
-                        if(curr_req.has_con > 0){
-                            for(int i =0; i<max_queue_size; i++){
-                                if(curr_req.lw_sw_con[i] == 1){
-                                    request_queue[curr_queue][i].lw_sw_con[first_req[curr_queue]] = 0;
-                                    request_queue[curr_queue][i].has_con--;
+                    if(!curr_mrm.check){
+                        if(curr_req.op == 1){
+                            lw_qs[curr_queue]--;
+                            if(curr_req.has_con > 0){
+                                for(int i =0; i<max_queue_size; i++){
+                                    if(curr_req.lw_sw_con[i] == 1){
+                                        request_queue[curr_queue][i].lw_sw_con[first_req[curr_queue]] = 0;
+                                        request_queue[curr_queue][i].has_con--;
+                                    }
                                 }
                             }
                         }
-                    }
-                    cont_reqs++;
-                    request_queue[curr_queue][first_req[curr_queue]] = null_req;
-                    queue_sizes[curr_queue]-=1;
-                    update_copies();
-                    first_req[curr_queue] = first_req[curr_queue] + 1 % max_queue_size;
-                    if(!curr_mrm.check){
+                        cont_reqs++;
+                        request_queue[curr_queue][first_req[curr_queue]] = null_req;
+                        queue_sizes[curr_queue]-=1;
+                        update_copies();
+                        first_req[curr_queue] = first_req[curr_queue] + 1 % max_queue_size;
+                    
                         issue_next_request(buffered, cycles);
                         if(in_buffer){
                             d_request n_req = request_queue[curr_queue][first_req[curr_queue]];
@@ -692,7 +711,9 @@ void execute()
                         cout<<" [SW-SW redundancy]"<<endl;
                     } else if(curr_mrm.lw_redun){
                         cout<<" [In cycles "<<cycles-1<<"-"<<cycles<<"] "<<"[LW-LW redundancy]"<<endl;
-                    } else{
+                    } else if(curr_mrm.first_req){
+                        cout<<"\n\tSending this request to DRAM\n";
+                    } else {
                         cout<<endl;
                     }
                     update_copies(0);
@@ -715,12 +736,14 @@ void execute()
                     cout<<"\tSwitched to request queue "<<assigned_rows[getRow(curr_mrm.addr/4)]<<".\n";
                 }
                 cout<<"\tFetched next DRAM-request [for address: "<<curr_mrm.addr<<"]\n";
+                cout<<"\tSending this request to DRAM\n";
                 update_copies();
             }
             if(up){
                 curr_mrm = null_mrm;
             }
         }
+
         bool print_port = false;
         if(issue_write){
             if(!to_print){
