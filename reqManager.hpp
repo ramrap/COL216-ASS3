@@ -217,6 +217,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
             }
             request_queue[pos.queue][pos.ind] = null_req;
             lw_qs[pos.queue]--;
+            queue_sizes[pos.queue]--;
             curr_mrm ={true, false, false, true, true, false, false, req.addr, -1, req.waiting_reg, req.core_num, false};
             mrm_delay_start = last_cycle + 1;
             mrm_delay_end = last_cycle + 2;
@@ -527,11 +528,11 @@ int total_queue_size(){
     return sum;
 }
 
-int requests_from_core(int c){
+int lw_requests_from_core(int c){
     int count =0;
     for(int i = 0; i<8; i++){
         for(int j =0; j<max_queue_size; j++){
-            if(!request_queue[i][j].is_null && request_queue[i][j].core_num == c){
+            if(!request_queue[i][j].is_null && request_queue[i][j].core_num == c && request_queue[i][j].op == 1){
                 count++;
             }
         }

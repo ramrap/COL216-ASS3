@@ -192,7 +192,7 @@ void execute()
 
     cout<<"Allocation of memory to respective core are as follow \n";
     for(int i=0;i<num_of_cores;i++){
-        cout<<i+1<<" =>  "<< memory_offset*i<<"-"<<memory_offset*(i+1)<<"\n";
+        cout<<i+1<<" =>  "<< memory_offset*i<<"-"<<memory_offset*(i+1) - 1<<"\n";
     }
     cout<<endl;
     cout<<endl;
@@ -486,7 +486,7 @@ void execute()
             }
             else{
                 done[core_num] = true;
-                if(requests_from_core(core_num) == 0 && done_msg[core_num]==false){
+                if(lw_requests_from_core(core_num) == 0 && done_msg[core_num]==false){
                     if(!to_print){
                         to_print = true;
                         last = print_cycle(last, cycles);
@@ -693,6 +693,9 @@ void execute()
                 }
             }
         }
+        if(curr_mrm.check || issue_write){
+            inst_rem = true;
+        }
 
         if(frwd_issue_write_cycle == cycles){
             if(!curr_write[curr_mrm.core].check){
@@ -744,13 +747,13 @@ void execute()
                 } else{
                     cout<<"\tForwarded value("<<curr_mrm.val<<") from a store-request to write data bus.";
                     if(!curr_write[curr_mrm.core].check){
-                        cout <<" [Write-value sent to write-port of core "<<curr_mrm.core + 1<<"]";
+                        cout <<" [Write-value sent to write-port of core "<<curr_mrm.core + 1<<"]\n";
                         curr_write[curr_mrm.core] = {true, curr_mrm.reg, curr_mrm.val};
-                        write_cycles[curr_mrm.core] = cycles + 1;
+                        write_cycles[curr_mrm.core] = cycles;
                         issue_write = true;
                         update_copies(0);
                     } else{
-                        cout <<" [Waiting for write-port to be free].";
+                        cout <<" [Waiting for write-port to be free]\n";
                         frwd_issue_write_cycle = cycles + 1;
                         up = false;
                     }
@@ -826,7 +829,7 @@ void execute()
                 cout << "error" << endl;
             }
             sort(changed_mem.begin(), changed_mem.end());
-            cout << "Memory Address:  ";
+            cout <<endl<< "Memory Address:  ";
             cout << (changed_mem[0][0] * columns + changed_mem[0][1]) * 4 << "-" << (changed_mem[0][0] * columns + changed_mem[0][1]) * 4 + 3 << " = " << memory[changed_mem[0][0]][changed_mem[0][1]] << endl;
         }
 
@@ -868,22 +871,27 @@ void execute()
                 cout << "cycle " << cycles << "-" << cycles + row_delay - 1 << endl;
                 cout << "DRAM: Wroteback row " << buffered << ".(In cycles " << cycles << "-" << cycles + row_delay - 1 << ")" << endl;
             }
-            cycles = cycles + row_delay;
             cout << endl;
             removeRedundAssigned();
             update_copies();
             print_reqs();
         }
     
-
-
     int total_instructions =0;
+    for(int core_num=0;core_num<num_of_cores; core_num++){
+        total_instructions += num_add[core_num] + num_addi[core_num] + num_sub[core_num] + num_mul[core_num] + num_bne[core_num] + num_beq[core_num] + num_j[core_num] + num_slt[core_num] + num_lw[core_num] + num_sw[core_num];
+    }
+    cout<<endl<<"Total Number of Instructions executed across all cores are "<<total_instructions<<" Instructions in "<<cycles-1<<" cycles"<<endl;
+    cout<<"IPC = "<<(double) total_instructions/(cycles-1)<<endl;
+    
+
+
 
     for (int core_num = 0; core_num < num_of_cores; core_num++)
     {
 
            cout << endl;
-        total_instructions += num_add[core_num] + num_addi[core_num] + num_sub[core_num] + num_mul[core_num] + num_bne[core_num] + num_beq[core_num] + num_j[core_num] + num_slt[core_num] + num_lw[core_num] + num_sw[core_num];
+        
         
         cout << "*****Core " << core_num + 1 << " Statistics***** \n";
         // cout << "Total no. of clock cycles: " << cycles - 1 << endl;
@@ -932,5 +940,4 @@ void execute()
         }
     }
     cout<<endl;
-    cout<<"Total Number of Instructions executed across all cores are "<<total_instructions<<" Instructions in "<<cycles-1<<" cycles"<<endl;
 }
