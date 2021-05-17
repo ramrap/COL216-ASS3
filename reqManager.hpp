@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "helper.hpp"
+
 using namespace std;
 
 const int max_queue_size = 16;
@@ -478,6 +479,7 @@ bool assign_queue(int row){
 
 
 void print_reqs(){
+    cout<<"REQUEST QUEUES : \n";
     for(int i = 0; i<8; i++){
         string s =" ";
         if(i == copy_curr_queue)

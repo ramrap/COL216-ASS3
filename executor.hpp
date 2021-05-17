@@ -160,6 +160,7 @@ void SW(Instruction I, int cycles, int core_num)
         throw runtime_error("unaligned address in sw: " + to_string(addr) + " at line " + to_string(I.line));
     }
 
+
     // --------------------------------------CHANGED-----------------------------------------
     add_req(I, addr, buffered, cycles, core_num, registers_core[core_num][registers[vars[0]]]);
     // --------------------------------------CHANGED----------------------------------------
@@ -181,6 +182,7 @@ void execute()
     int cycles=1;
     vector<int> PC(num_of_cores, 0);
     vector<bool> done(num_of_cores, false);
+    vector<bool> done_msg(num_of_cores, false);
     bool DONE;
     changed_regs.resize(num_of_cores);
     bool to_print = false, issue_write = false;
@@ -448,11 +450,13 @@ void execute()
             }
             else{
                 done[core_num] = true;
-                if(requests_from_core(core_num) == 0){
+                if(requests_from_core(core_num) == 0 && done_msg[core_num]==false){
                     if(!to_print){
                         to_print = true;
                         last = print_cycle(last, cycles);
+                        
                     }
+                    done_msg[core_num]=true;
                     cout << "In core " << core_num + 1 << ": Program Executed Successfully!\n";
                 }
                 DONE = true;
@@ -802,7 +806,7 @@ void execute()
         
         if (to_print)
         {
-            cout<<endl<<"REQUEST QUEUES: \n";
+            cout<<endl;
             print_reqs();
             cout << endl;
         }
