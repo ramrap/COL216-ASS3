@@ -198,10 +198,11 @@ int main(int argc, char *argv[])
         
     }
 
+
     for (int read = 0; read < num_of_cores; read++)
     {
 
-       cout<<file_name[read]<<" \n";
+    
         ifstream file(file_name[read]);
         if (!file.is_open())
         {
@@ -223,7 +224,7 @@ int main(int argc, char *argv[])
                 // cout<<"trimmed => "<<line<<endl;
                 oinst[read].push_back(line);
 
-                cout<<(line.compare("") != 0)<<endl;
+                // cout<<(line.compare("") != 0)<<endl;
                 // cout<<"completed \n";
                 
                 if (line.compare("") != 0)
@@ -291,6 +292,7 @@ int main(int argc, char *argv[])
             }
         }
     }
+    
 
   
 

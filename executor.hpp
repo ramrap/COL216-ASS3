@@ -189,6 +189,13 @@ void execute()
     int busy_core1;
     int busy_core2;
     int flag = 1;
+
+    cout<<"Allocation of memory to respective core are as follow \n";
+    for(int i=0;i<num_of_cores;i++){
+        cout<<i+1<<" =>  "<< memory_offset*i<<"-"<<memory_offset*(i+1)<<"\n";
+    }
+    cout<<endl;
+    cout<<endl;
     while (cycles<=simulation_time)
     {
         busy_write = false;
@@ -870,11 +877,13 @@ void execute()
     
 
 
+    int total_instructions =0;
 
     for (int core_num = 0; core_num < num_of_cores; core_num++)
     {
 
            cout << endl;
+        total_instructions += num_add[core_num] + num_addi[core_num] + num_sub[core_num] + num_mul[core_num] + num_bne[core_num] + num_beq[core_num] + num_j[core_num] + num_slt[core_num] + num_lw[core_num] + num_sw[core_num];
         
         cout << "*****Core " << core_num + 1 << " Statistics***** \n";
         // cout << "Total no. of clock cycles: " << cycles - 1 << endl;
@@ -922,4 +931,6 @@ void execute()
             }
         }
     }
+    cout<<endl;
+    cout<<"Total Number of Instructions executed across all cores are "<<total_instructions<<" Instructions in "<<cycles-1<<" cycles"<<endl;
 }
