@@ -215,7 +215,7 @@ void execute()
         bool inst_rem = false;
         for (int i = 0 ; i < num_of_cores; i++)
         {   
-            int core_num = (kkk + i) % num_of_cores; 
+            int core_num =(i) % num_of_cores; 
             bool to_print_inst =false;
             blocked_inst[core_num] = {0, 0, 0, 0, false};
             if (PC[core_num] != inst_size[core_num])

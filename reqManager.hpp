@@ -69,7 +69,7 @@ struct blocked_regs{
 };
 
 
-struct d_request null_req = {0, 0, 0, 0, -1, 0, 0, false, true, 0, {0}};
+struct d_request null_req = { 0, 0, 0, -1, 0, 0, false, true, 0, {0}};
 int curr_queue = -1;            // curr queue
 bool in_buffer = false;
 d_request request_queue[8][max_queue_size];     //dram request queues
