@@ -124,9 +124,9 @@ void LW(Instruction I, int cycles, int core_num)
     vector<int> args = I.args;
     int addr = get_addr( I, core_num) ;
 
-    if (addr < occupied_mem || addr >= (1 << 20))
+    if (addr < memory_offset*(core_num) || addr >= memory_offset*(core_num + 1))
     {
-        throw runtime_error("address(" + to_string(addr) + ") is out of range(" + to_string(occupied_mem) + " to " + to_string((1 << 20) - 1) + ") at line " + to_string(I.line));
+        throw runtime_error("address(" + to_string(addr) + ") is out of range(" + to_string(memory_offset*(core_num)) + " to " + to_string(memory_offset*(core_num + 1) -1) + ") at line " + to_string(I.line));
     }
     if (addr % 4 != 0)
     {
@@ -146,9 +146,9 @@ void SW(Instruction I, int cycles, int core_num)
     vector<int> args = I.args;
     int addr = get_addr( I, core_num);
 
-    if (addr < occupied_mem || addr >= (1 << 20))
+    if (addr < memory_offset*(core_num) || addr >= memory_offset*(core_num + 1))
     {
-        throw runtime_error("address(" + to_string(addr) + ") is out of range(" + to_string(occupied_mem) + " to " + to_string((1 << 20) - 1) + ") at line " + to_string(I.line));
+        throw runtime_error("address(" + to_string(addr) + ") is out of range(" + to_string(memory_offset*(core_num)) + " to " + to_string(memory_offset*(core_num + 1) -1) + ") at line " + to_string(I.line));
     }
     if (addr % 4 != 0)
     {
@@ -196,6 +196,8 @@ void execute()
     }
     cout<<endl;
     cout<<endl;
+    int kkk = -1;
+    int ppp = -1;
     while (cycles<=simulation_time)
     {
         busy_write = false;
@@ -209,10 +211,11 @@ void execute()
             busy_core2 = curr_mrm.core;
             busy_write = true;
         }
-
+        kkk = (ppp+ 1)%num_of_cores;
         bool inst_rem = false;
-        for (int core_num = 0; core_num < num_of_cores; core_num++)
+        for (int i = 0 ; i < num_of_cores; i++)
         {   
+            int core_num = (kkk + i) % num_of_cores; 
             bool to_print_inst =false;
             blocked_inst[core_num] = {0, 0, 0, 0, false};
             if (PC[core_num] != inst_size[core_num])
@@ -477,6 +480,7 @@ void execute()
                         to_print = true;
                         cout<<"Instruction Execution:"<<endl;
                     }
+                    ppp = core_num;
                     cout<< "\tIn core " << core_num + 1 <<" (PC = " << temp_pc * 4 << "): ";
                     cout << oinst[core_num][temp.line - 1] << endl;
                     

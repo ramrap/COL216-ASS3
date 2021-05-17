@@ -54,6 +54,10 @@ int getColumn(int num){
     return num % columns;
 }
 
+int addrFromQ(int row, int column){
+    return ((row * 1024) + column*4);
+}
+
 // Convert long long to Hex
 string llToHex(long long num){
     stringstream sstream;

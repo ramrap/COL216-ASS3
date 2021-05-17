@@ -45,7 +45,7 @@ int put_back_end = -1, put_back_start = -1, row_access_end = -1, row_access_star
 
 //-----------------------------------------------------------------------------------------------------------------------------------
 struct d_request{
-    int addr = 0, access_row = 0, access_column = 0, op = 0, data_bus = -1, core_num = 0;
+    int access_row = 0, access_column = 0, op = 0, data_bus = -1, core_num = 0;
     int waiting_reg;
     bool issue_msg = false;
     bool is_null = true;
@@ -138,7 +138,6 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
     req.core_num= core_num;
     req.access_row = getRow(addr/4);
     req.access_column = getColumn(addr/4);
-    req.addr = addr;
     req.waiting_reg = registers[vars[0]];
     req.has_con = 0;
     if(inst == "sw"){
@@ -156,7 +155,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
         if(req.op == 1){
             lw_qs[curr_queue]++;
         }
-        curr_mrm ={true, false, false, true, false, false, false, req.addr, -1, req.waiting_reg, req.core_num, true};
+        curr_mrm ={true, false, false, true, false, false, false, addr, -1, req.waiting_reg, req.core_num, true};
         mrm_delay_start = last_cycle + 1;
         mrm_delay_end = last_cycle + 1;
         assign_cycle_values(last_buffer, last_cycle + 1);
@@ -173,10 +172,10 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
             continue;
         }
 
-        if(req.addr == j_req.addr){
+        if(req.access_row == j_req.access_row && req.access_column == j_req.access_column){
             if(j_req.op == 0){
                 if(req.op == 1){
-                    curr_mrm ={true, false, false, true, false, false, true, req.addr, j_req.data_bus, req.waiting_reg, req.core_num, false};
+                    curr_mrm ={true, false, false, true, false, false, true, addr, j_req.data_bus, req.waiting_reg, req.core_num, false};
                     mrm_delay_start = last_cycle + 1;
                     mrm_delay_end = last_cycle + 1;
                     return;
@@ -185,7 +184,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
                     request_queue[q][(j+ first_req[q]) % max_queue_size].core_num = req.core_num;
                     request_queue[q][(j+ first_req[q]) % max_queue_size].data_bus = req.data_bus;
                     request_queue[q][(j+ first_req[q]) % max_queue_size].waiting_reg = req.waiting_reg;
-                    curr_mrm ={true, false, false, true, false, true, false, req.addr, -1, req.waiting_reg, req.core_num, false};
+                    curr_mrm ={true, false, false, true, false, true, false, addr, -1, req.waiting_reg, req.core_num, false};
                     mrm_delay_start = last_cycle + 1;
                     mrm_delay_end = last_cycle + 1;
                     return;
@@ -218,7 +217,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
             request_queue[pos.queue][pos.ind] = null_req;
             lw_qs[pos.queue]--;
             queue_sizes[pos.queue]--;
-            curr_mrm ={true, false, false, true, true, false, false, req.addr, -1, req.waiting_reg, req.core_num, false};
+            curr_mrm ={true, false, false, true, true, false, false, addr, -1, req.waiting_reg, req.core_num, false};
             mrm_delay_start = last_cycle + 1;
             mrm_delay_end = last_cycle + 2;
         }
@@ -236,7 +235,7 @@ void add_req(Instruction I, int addr, int last_buffer, int last_cycle,int core_n
         }
     }
     if(!curr_mrm.check){
-        curr_mrm ={true, false, false, true, false, false, false, req.addr, -1, req.waiting_reg, req.core_num, false};
+        curr_mrm ={true, false, false, true, false, false, false, addr, -1, req.waiting_reg, req.core_num, false};
         mrm_delay_start = last_cycle + 1;
         mrm_delay_end = last_cycle + 1;
     }
@@ -282,7 +281,7 @@ void switchQueue(int buffer, int cycle){
             if(b.is_lw)
                 lw_blocks[qu] += 1;
             if(qu != curr_queue){
-                if(blocks[qu] > max || (blocks[qu] == max && lw_blocks[qu] > lw_blocks[q_num])){
+                if(blocks[qu] > max || (blocks[qu] == max && lw_blocks[qu] > lw_blocks[q_num]) || (blocks[qu] == max && lw_blocks[qu] == lw_blocks[q_num] && lw_qs[qu] > lw_qs[q_num])){
                     max = blocks[qu];
                     q_num = qu;
                     ind = in;
@@ -295,7 +294,7 @@ void switchQueue(int buffer, int cycle){
             int in = loadReqs[i][b.reg2].ind;
             blocks[qu] += 1;
             if(qu != curr_queue){
-                if(blocks[qu] > max || (blocks[qu] == max && lw_blocks[qu] > lw_blocks[q_num])){
+                if(blocks[qu] > max || (blocks[qu] == max && lw_blocks[qu] > lw_blocks[q_num]) || (blocks[qu] == max && lw_blocks[qu] == lw_blocks[q_num] && lw_qs[qu] > lw_qs[q_num])){
                     max = blocks[qu];
                     q_num = qu;
                     ind = in;
@@ -308,7 +307,7 @@ void switchQueue(int buffer, int cycle){
             int in = loadReqs[i][b.reg3].ind;
             blocks[qu] += 1;
             if(qu != curr_queue){
-                if(blocks[qu] > max || (blocks[qu] == max && lw_blocks[qu] > lw_blocks[q_num])){
+                if(blocks[qu] > max || (blocks[qu] == max && lw_blocks[qu] > lw_blocks[q_num]) || (blocks[qu] == max && lw_blocks[qu] == lw_blocks[q_num] && lw_qs[qu] > lw_qs[q_num])){
                     max = blocks[qu];
                     q_num = qu;
                     ind = in;
@@ -356,7 +355,7 @@ void issue_next_request(int buffer, int cycle){
             mrm_delay_start = cycle + 1;
             mrm_delay_end = cycle + 1;
         }
-        curr_mrm.addr = request_queue[curr_queue][first_req[curr_queue]].addr;
+        curr_mrm.addr = addrFromQ(request_queue[curr_queue][first_req[curr_queue]].access_row, request_queue[curr_queue][first_req[curr_queue]].access_column);
         assign_cycle_values(buffer, cycle+1);
     }
     else{
@@ -505,7 +504,7 @@ void print_reqs(){
                 p = ss + to_string(-1) +sk;
             }
             else{
-                p = ss + to_string(req.addr) +sk;
+                p = ss + to_string(addrFromQ(req.access_row, req.access_column)) +sk;
             }
             cout<<p;
             int x = 10 - p.length();
