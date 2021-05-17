@@ -436,7 +436,6 @@ void execute()
                         if (k == 0 && (!curr_mrm.check) && (issue_next_cycle!= cycles) && assign_queue(getRow(get_addr(temp, core_num)/4)) )
                         {
                             LW(temp, cycles, core_num);
-                            num_lw[core_num]++;
                             PC[core_num]++;
                             to_print_inst = true;
                         } else if(k != 0)
@@ -445,7 +444,6 @@ void execute()
                     else if ((!in_buffer)&& (!curr_mrm.check) && (issue_next_cycle!= cycles)  && assign_queue(getRow(get_addr(temp, core_num)/4)))
                     {
                         LW(temp, cycles, core_num);
-                        num_lw[core_num]++;
                         PC[core_num]++;
                         to_print_inst = true;
                     }
@@ -584,6 +582,7 @@ void execute()
                         write_cycles[curr_req.core_num] = cycles;
                         issue_write = true;
                         issue_next = true;
+                        num_lw[curr_req.core_num]++;
                     }
                     else{
                         cout<<"ERRROORRRRR"<<endl;
